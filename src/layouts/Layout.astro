@@ -1,0 +1,71 @@
+---
+import '../styles/global.css';
+const { title = 'Agent Debugger - Multi-Agent Debugging & Monitoring Platform' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="description" content="Debug and monitor your AI agents like Chrome DevTools. Trace every thinking step, tool call, and decision across single and multi-agent systems." />
+    <meta name="keywords" content="agent debugging tool, ai agent monitoring, multi-agent monitoring, agent trace viewer" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <nav class="border-b border-zinc-800">
+      <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 font-bold text-lg">
+          <span class="w-3 h-3 rounded-full bg-indigo-500 inline-block animate-pulse"></span>
+          <span class="gradient-text">Agent Debugger</span>
+        </a>
+        <div class="flex items-center gap-6 text-sm text-zinc-400">
+          <a href="/features" class="hover:text-zinc-200 transition-colors">Features</a>
+          <a href="/pricing" class="hover:text-zinc-200 transition-colors">Pricing</a>
+          <a href="/blog" class="hover:text-zinc-200 transition-colors">Blog</a>
+          <a href="#cta" class="btn-primary text-sm px-4 py-2">Start Free</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="border-t border-zinc-800 mt-24">
+      <div class="max-w-6xl mx-auto px-4 py-12">
+        <div class="grid md:grid-cols-4 gap-8">
+          <div class="md:col-span-2">
+            <div class="flex items-center gap-2 font-bold text-lg mb-3">
+              <span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>
+              <span class="gradient-text">Agent Debugger</span>
+            </div>
+            <p class="text-sm text-zinc-500 max-w-md">
+              The developer tool for debugging and monitoring AI agents. 
+              Trace every decision, tool call, and token — across single and multi-agent systems.
+            </p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-sm text-zinc-300 mb-3">Product</h4>
+            <ul class="space-y-2 text-sm text-zinc-500">
+              <li><a href="/features" class="hover:text-zinc-300 transition-colors">Features</a></li>
+              <li><a href="/pricing" class="hover:text-zinc-300 transition-colors">Pricing</a></li>
+              <li><a href="/blog" class="hover:text-zinc-300 transition-colors">Blog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-sm text-zinc-300 mb-3">Legal</h4>
+            <ul class="space-y-2 text-sm text-zinc-500">
+              <li><a href="/privacy" class="hover:text-zinc-300 transition-colors">Privacy</a></li>
+              <li><a href="/terms" class="hover:text-zinc-300 transition-colors">Terms</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mt-8 pt-8 border-t border-zinc-800 text-center text-xs text-zinc-600">
+          &copy; 2026 Agent Debugger. All rights reserved.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,101 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="AI Agent Debugging Pricing | Agent Debugger">
+  <section class="max-w-5xl mx-auto px-4 pt-24 pb-16">
+    <h1 class="text-4xl md:text-5xl font-bold text-center mb-4">Pricing</h1>
+    <p class="text-zinc-400 text-center max-w-xl mx-auto mb-4">
+      Start free. Scale as your agents grow.
+    </p>
+    <p class="text-sm text-zinc-600 text-center mb-16">
+      All plans include 30-day retention · No credit card for Hobby
+    </p>
+
+    <div class="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      
+      <!-- Hobby -->
+      <div class="glow-card p-8 flex flex-col">
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold mb-1">Hobby</h2>
+          <div class="text-3xl font-bold">$19<span class="text-base text-zinc-500 font-normal">/mo</span></div>
+          <p class="text-sm text-zinc-500 mt-1">For solo developers</p>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-400 flex-1 mb-8">
+          <li class="flex items-start gap-2">✅ <span>5,000 traces / month</span></li>
+          <li class="flex items-start gap-2">✅ <span>Step-by-step trace timeline</span></li>
+          <li class="flex items-start gap-2">✅ <span>Token & cost breakdown</span></li>
+          <li class="flex items-start gap-2">✅ <span>Failure replay</span></li>
+          <li class="flex items-start gap-2">✅ <span>All frameworks supported</span></li>
+          <li class="flex items-start gap-2 text-zinc-600">— <span class="text-zinc-600">Multi-agent topology</span></li>
+          <li class="flex items-start gap-2 text-zinc-600">— <span class="text-zinc-600">Alerts & notifications</span></li>
+          <li class="flex items-start gap-2 text-zinc-600">— <span class="text-zinc-600">Team collaboration</span></li>
+        </ul>
+        <a href="#cta" class="btn-secondary w-full text-center">Start Free</a>
+      </div>
+
+      <!-- Pro -->
+      <div class="glow-card p-8 flex flex-col border-indigo-500/30 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-xs font-semibold px-3 py-1 rounded-full">Most Popular</div>
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold mb-1">Pro</h2>
+          <div class="text-3xl font-bold">$49<span class="text-base text-zinc-500 font-normal">/mo</span></div>
+          <p class="text-sm text-zinc-500 mt-1">For small teams</p>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-400 flex-1 mb-8">
+          <li class="flex items-start gap-2">✅ <span>50,000 traces / month</span></li>
+          <li class="flex items-start gap-2">✅ <span>Everything in Hobby</span></li>
+          <li class="flex items-start gap-2">✅ <span><strong class="text-zinc-200">Multi-agent topology</strong></span></li>
+          <li class="flex items-start gap-2">✅ <span>Real-time alerts (Slack/webhook)</span></li>
+          <li class="flex items-start gap-2">✅ <span>Token budget auto-stop</span></li>
+          <li class="flex items-start gap-2">✅ <span>3 team members</span></li>
+          <li class="flex items-start gap-2">✅ <span>90-day retention</span></li>
+        </ul>
+        <a href="#cta" class="btn-primary w-full text-center">Get Started</a>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="glow-card p-8 flex flex-col">
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold mb-1">Enterprise</h2>
+          <div class="text-3xl font-bold">Custom</div>
+          <p class="text-sm text-zinc-500 mt-1">For organizations</p>
+        </div>
+        <ul class="space-y-3 text-sm text-zinc-400 flex-1 mb-8">
+          <li class="flex items-start gap-2">✅ <span>Unlimited traces</span></li>
+          <li class="flex items-start gap-2">✅ <span>Everything in Pro</span></li>
+          <li class="flex items-start gap-2">✅ <span>Self-hosted deployment</span></li>
+          <li class="flex items-start gap-2">✅ <span>SSO / SAML</span></li>
+          <li class="flex items-start gap-2">✅ <span>Custom retention</span></li>
+          <li class="flex items-start gap-2">✅ <span>Dedicated support</span></li>
+          <li class="flex items-start gap-2">✅ <span>Data residency options</span></li>
+        </ul>
+        <a href="#cta" class="btn-secondary w-full text-center">Contact Sales</a>
+      </div>
+
+    </div>
+
+    <!-- FAQ -->
+    <div class="max-w-2xl mx-auto mt-20">
+      <h2 class="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+      <div class="space-y-4">
+        <details class="glow-card p-4 group">
+          <summary class="cursor-pointer font-medium text-sm flex items-center justify-between">Can I self-host Agent Debugger? <span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span></summary>
+          <p class="text-sm text-zinc-500 mt-3">Yes. Enterprise plan includes self-hosted deployment. We provide a Docker image with D1-compatible SQLite backend.</p>
+        </details>
+        <details class="glow-card p-4 group">
+          <summary class="cursor-pointer font-medium text-sm flex items-center justify-between">What frameworks do you support? <span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span></summary>
+          <p class="text-sm text-zinc-500 mt-3">AutoGen, CrewAI, LangGraph, LangChain, and custom agent frameworks. Our SDK works with any Python or TypeScript agent via a simple decorator.</p>
+        </details>
+        <details class="glow-card p-4 group">
+          <summary class="cursor-pointer font-medium text-sm flex items-center justify-between">How is this different from LangSmith? <span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span></summary>
+          <p class="text-sm text-zinc-500 mt-3">LangSmith is tied to LangChain and focuses on single-chain LLM observability. Agent Debugger is framework-agnostic, provides true multi-agent topology visualization, and includes deterministic failure replay.</p>
+        </details>
+        <details class="glow-card p-4 group">
+          <summary class="cursor-pointer font-medium text-sm flex items-center justify-between">What is "trace replay"? <span class="text-zinc-600 group-open:rotate-180 transition-transform">▼</span></summary>
+          <p class="text-sm text-zinc-500 mt-3">Replay shows you a step-by-step playback of any recorded agent session — exactly what the agent saw, decided, and output at each step. Use it to debug failures, audit decisions, and identify hallucination patterns.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</Layout>

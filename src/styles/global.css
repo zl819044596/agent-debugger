@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --color-accent: #6366f1;
+  --color-accent-dark: #4f46e5;
+}
+
+html {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #09090b;
+  color: #e4e4e7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.gradient-text {
+  background: linear-gradient(to right, #818cf8, #a78bfa, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-card {
+  border: 1px solid #27272a;
+  border-radius: 0.75rem;
+  background: rgba(24, 24, 27, 0.5);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.glow-card:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 20px -5px rgba(99, 102, 241, 0.15);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  color: white;
+  background: #6366f1;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #818cf8;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  color: #e4e4e7;
+  border: 1px solid #3f3f46;
+  transition: border-color 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: #71717a;
+}

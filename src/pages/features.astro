@@ -1,0 +1,83 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="AI Agent Monitoring & Debugging Features | Agent Debugger">
+  <section class="max-w-5xl mx-auto px-4 pt-24 pb-16">
+    <h1 class="text-4xl md:text-5xl font-bold text-center mb-4">Features</h1>
+    <p class="text-zinc-400 text-center max-w-xl mx-auto mb-16">
+      From single-agent tracing to multi-agent topology — everything you need to debug and monitor your AI agents in production.
+    </p>
+
+    <!-- Feature Grid -->
+    <div class="grid md:grid-cols-2 gap-8">
+      
+      <div class="glow-card p-8">
+        <div class="text-3xl mb-4">📊</div>
+        <h2 class="text-xl font-bold mb-2">Agent Trace Timeline</h2>
+        <p class="text-sm text-zinc-400 mb-4">Every step your agent takes — thinking, tool calls, decisions, outputs — in a chronological timeline. Click any step to inspect the full input, output, and intermediate state.</p>
+        <ul class="text-sm text-zinc-500 space-y-1">
+          <li>→ Expand thinking chain for any step</li>
+          <li>→ Filter by tool type or status</li>
+          <li>→ Share trace links with your team</li>
+        </ul>
+      </div>
+
+      <div class="glow-card p-8">
+        <div class="text-3xl mb-4">💸</div>
+        <h2 class="text-xl font-bold mb-2">Per-Step Token & Cost Breakdown</h2>
+        <p class="text-sm text-zinc-400 mb-4">Know exactly how many tokens each step consumed — not just the conversation total. Identify costly thinking steps and optimize your prompts.</p>
+        <ul class="text-sm text-zinc-500 space-y-1">
+          <li>→ Cost per model, per step, per tool</li>
+          <li>→ Budget alerts and cost thresholds</li>
+          <li>→ Export cost reports</li>
+        </ul>
+      </div>
+
+      <div class="glow-card p-8">
+        <div class="text-3xl mb-4">🔁</div>
+        <h2 class="text-xl font-bold mb-2">Failure Replay</h2>
+        <p class="text-sm text-zinc-400 mb-4">Replay any failed trace step-by-step. See exactly what the agent saw, what it decided, and where it went wrong. No more guessing from raw logs.</p>
+        <ul class="text-sm text-zinc-500 space-y-1">
+          <li>→ One-click replay from error dashboard</li>
+          <li>→ Step-by-step playback with pauses</li>
+          <li>→ Compare successful vs failed traces</li>
+        </ul>
+      </div>
+
+      <div class="glow-card p-8">
+        <div class="text-3xl mb-4">🌐</div>
+        <h2 class="text-xl font-bold mb-2">Multi-Agent Topology Map</h2>
+        <p class="text-sm text-zinc-400 mb-4">Visualize how your agents collaborate. See the communication graph, handoff points, and message flow between agents in real-time.</p>
+        <ul class="text-sm text-zinc-500 space-y-1">
+          <li>→ Agent relationship graph</li>
+          <li>→ Cross-agent trace linking</li>
+          <li>→ Handoff failure detection</li>
+        </ul>
+      </div>
+
+      <div class="glow-card p-8">
+        <div class="text-3xl mb-4">🔔</div>
+        <h2 class="text-xl font-bold mb-2">Real-Time Alerts</h2>
+        <p class="text-sm text-zinc-400 mb-4">Get notified when your agents behave unexpectedly — high latency, excessive token usage, error loops, or budget exceeded.</p>
+        <ul class="text-sm text-zinc-500 space-y-1">
+          <li>→ Slack/email/webhook notifications</li>
+          <li>→ Custom alert thresholds</li>
+          <li>→ Token budget auto-stop</li>
+        </ul>
+      </div>
+
+      <div class="glow-card p-8">
+        <div class="text-3xl mb-4">🔌</div>
+        <h2 class="text-xl font-bold mb-2">Framework-Agnostic SDK</h2>
+        <p class="text-sm text-zinc-400 mb-4">Works with any agent framework — LangChain, AutoGen, CrewAI, LangGraph, or custom implementations. One decorator to trace everything.</p>
+        <ul class="text-sm text-zinc-500 space-y-1">
+          <li>→ Python & TypeScript SDK</li>
+          <li>→ Webhook fallback for non-SDK clients</li>
+          <li>→ OpenTelemetry compatible</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+</Layout>
