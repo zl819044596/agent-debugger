@@ -1,93 +1,124 @@
 // POST /api/payments/checkout - Create a Creem checkout session
-// Requires authentication. Returns a checkout URL to redirect the user to.
+// Returns a checkout URL to redirect the user to
 
-import { json, error, handleOptions } from '../_auth';
-
-// Check for global auth helper
-async function authenticate(DB, request) {
-  // Reuse the same authenticate logic from _auth.ts
-  const { authenticate: auth } = await import('../_auth');
-  return auth(DB, request);
-}
+import { handleOptions } from '../_auth';
 
 export async function onRequest(context) {
   const { request, env } = context;
 
   if (request.method === 'OPTIONS') return handleOptions();
-  if (request.method !== 'POST') return error('Method not allowed', 405);
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+    });
+  }
 
-  // Authenticate
-  const { authenticate } = await import('../_auth');
-  const auth = await authenticate(env.DB, request);
-  if (!auth) return error('Not authenticated', 401);
+  // Authenticate via same-origin session cookie
+  const cookie = request.headers.get('Cookie') || '';
+  const sessionMatch = cookie.match(/ad_session=([^;]+)/);
+  if (!sessionMatch) {
+    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   try {
-    const body = await request.json().catch(() => ({}));
-    const { price_id, success_url, cancel_url } = body;
-
-    if (!price_id) {
-      // Auto-detect the Pro price ID from env or use default
-      return error('Missing price_id. Provide the Creem price ID.', 400);
-    }
-
-    // Get user info for metadata
+    const sessionId = sessionMatch[1];
     const user = await env.DB.prepare(
-      'SELECT id, email, name FROM users WHERE id = ?'
-    ).bind(auth.user.id).first();
+      `SELECT u.id, u.email, u.name, u.plan
+       FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.id = ? AND s.expires_at > datetime('now')`
+    ).bind(sessionId).first();
 
-    if (!user) return error('User not found', 404);
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Session expired' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Already pro?
-    if (auth.user.plan === 'pro') {
-      return json({ already_pro: true, message: 'You already have a Pro plan' });
+    if (user.plan === 'pro') {
+      return new Response(JSON.stringify({ already_pro: true }), {
+        status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
-    // Build Creem checkout URL
-    // Creem API: POST https://api.creem.io/v1/checkouts
-    const creemApiKey = env.CREEM_API_KEY;
-    if (!creemApiKey) return error('Payment not configured', 500);
+    const creemKey = env.CREEM_API_KEY;
+    if (!creemKey) {
+      return new Response(JSON.stringify({ error: 'Payment not configured' }), {
+        status: 500, headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     const origin = new URL(request.url).origin;
-    const defaultSuccessUrl = `${origin}/app?upgrade=success`;
-    const defaultCancelUrl = `${origin}/app`;
 
+    // Creem API expects a product_id (from Creem dashboard) and metadata
+    // First, get the product from Creem to find the latest price
+    const productRes = await fetch('https://api.creem.io/v1/products', {
+      headers: { 'x-api-key': creemKey, 'Accept': 'application/json' },
+    });
+
+    const products = await productRes.json();
+    const products_list = products.data || products.results || products || [];
+
+    // Find our product
+    const product = Array.isArray(products_list)
+      ? products_list.find(p => p.name?.includes('Agent Debugger'))
+      : null;
+
+    if (!product) {
+      return new Response(JSON.stringify({ error: 'Product not found in Creem. Create the product first.' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const priceId = product.price_id || product.default_price?.id || product.price?.id;
+
+    // Create checkout session
     const checkoutPayload = {
-      product_id: price_id,
-      success_url: success_url || defaultSuccessUrl,
-      cancel_url: cancel_url || defaultCancelUrl,
+      product_id: product.id,
+      price_id: priceId,
+      success_url: `${origin}/app?upgrade=success`,
+      cancel_url: `${origin}/app`,
       metadata: {
         user_id: user.id,
         user_email: user.email,
       },
     };
 
-    // Call Creem API to create checkout
-    const creemResponse = await fetch('https://api.creem.io/v1/checkouts', {
+    const checkoutRes = await fetch('https://api.creem.io/v1/checkouts', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-api-key': creemKey,
         'Accept': 'application/json',
-        'x-api-key': creemApiKey,
       },
       body: JSON.stringify(checkoutPayload),
     });
 
-    if (!creemResponse.ok) {
-      const errText = await creemResponse.text();
-      console.error('[checkout] Creem API error:', creemResponse.status, errText);
-      return error(`Creem API error: ${creemResponse.status}`, 502);
+    if (!checkoutRes.ok) {
+      const errText = await checkoutRes.text();
+      return new Response(JSON.stringify({ error: `Creem error: ${checkoutRes.status}`, detail: errText }), {
+        status: 502, headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const creemData = await creemResponse.json();
+    const checkoutData = await checkoutRes.json();
+    const checkoutUrl = checkoutData.checkout_url || checkoutData.url || checkoutData.data?.url;
 
-    // Return checkout URL to redirect the user
-    return json({
-      checkout_url: creemData.checkout_url || creemData.url || creemData.data?.url,
-      checkout_id: creemData.id || creemData.checkout_id,
+    if (!checkoutUrl) {
+      return new Response(JSON.stringify({ error: 'No checkout URL in response', data: checkoutData }), {
+        status: 502, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify({ checkout_url: checkoutUrl }), {
+      status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
 
   } catch (err) {
-    console.error('[checkout] Error:', err.message);
-    return error(err.message, 500);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
