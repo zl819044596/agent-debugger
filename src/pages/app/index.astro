@@ -10,7 +10,10 @@ const apiBase = '';
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
-<script is:inline src="https://d3js.org/d3.v7.min.js"></script>
+<script is:inline>
+// Load D3.js for topology visualization
+(function(){var d=document.createElement('script');d.src='https://d3js.org/d3.v7.min.js';d.onload=function(){document.dispatchEvent(new Event('d3-loaded'))};document.head.appendChild(d)})();
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0a0a0b;--surface:#141416;--border:#27272a;--text:#e4e4e7;--text2:#71717a;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--radius:8px}
@@ -734,6 +737,18 @@ function toggleTopologyAutoRefresh() {
 let topologyData = null;
 
 async function loadTopology() {
+  // Wait for D3 to be loaded (dynamically injected in head)
+  if (typeof d3 === 'undefined') {
+    await new Promise(resolve => {
+      if (typeof d3 !== 'undefined') return resolve();
+      document.addEventListener('d3-loaded', resolve, { once: true });
+      // Fallback: check every 100ms
+      const check = setInterval(() => {
+        if (typeof d3 !== 'undefined') { clearInterval(check); resolve(); }
+      }, 100);
+      setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+    });
+  }
   const container = document.getElementById('topology-container');
   const stateEl = document.getElementById('topology-state');
   const msgEl = document.getElementById('topology-message');
@@ -1101,6 +1116,7 @@ function renderTopologyGraph(data) {
 
 // ─── Topology: Zoom Controls ─────────────────────
 function topologyZoomIn() {
+  if (typeof d3 === 'undefined') return;
   const container = document.getElementById('topology-container');
   const svg = container?.querySelector('svg');
   if (!svg) return;
