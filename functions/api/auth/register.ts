@@ -34,10 +34,13 @@ export async function onRequest(context) {
       'INSERT INTO projects (id, user_id, name) VALUES (?, ?, ?)'
     ).bind(projectId, userId, 'default').run();
 
+    // Create API key with id + key_hash
     const apiKeyId = `ad_${randomHex(32)}`;
+    const keyHashSalt = randomHex(16);
+    const keyHash = await hashPassword(apiKeyId, keyHashSalt);
     await env.DB.prepare(
-      'INSERT INTO api_keys (id, user_id, name, project_id) VALUES (?, ?, ?, ?)'
-    ).bind(apiKeyId, userId, 'default', projectId).run();
+      'INSERT INTO api_keys (id, user_id, name, project_id, key_hash) VALUES (?, ?, ?, ?, ?)'
+    ).bind(apiKeyId, userId, 'default', projectId, keyHash).run();
 
     const sessionId = await createSession(env.DB, userId);
 

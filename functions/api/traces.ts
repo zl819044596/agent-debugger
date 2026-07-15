@@ -1,5 +1,5 @@
 // GET /api/traces - List traces for a project (requires auth)
-import { json, error, authenticate } from '../_auth';
+import { json, error, authenticate } from './_auth';
 
 export async function onRequest(context) {
   const { request, env } = context;

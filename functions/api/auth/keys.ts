@@ -1,8 +1,8 @@
 // GET  /api/auth/keys    - List API keys for current user
 // POST /api/auth/keys    - Create a new API key
-// DELETE /api/auth/keys/:id - Delete an API key
-// (DELETE is handled via POST with _method=DELETE for simplicity)
-import { json, error, handleOptions, authenticate, randomHex } from '../_auth';
+import {
+  json, error, handleOptions, authenticate, randomHex, hashPassword
+} from '../_auth';
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -57,9 +57,11 @@ export async function onRequest(context) {
       }
 
       const keyId = `ad_${randomHex(32)}`;
+      const keySalt = randomHex(16);
+      const keyHash = await hashPassword(keyId, keySalt);
       await env.DB.prepare(
-        'INSERT INTO api_keys (id, user_id, name, project_id) VALUES (?, ?, ?, ?)'
-      ).bind(keyId, auth.user.id, name || 'default', targetProjectId).run();
+        'INSERT INTO api_keys (id, user_id, name, project_id, key_hash) VALUES (?, ?, ?, ?, ?)'
+      ).bind(keyId, auth.user.id, name || 'default', targetProjectId, keyHash).run();
 
       // Return the full key once (won't be shown again)
       return json({
