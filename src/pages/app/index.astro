@@ -864,24 +864,15 @@ function renderTopologyGraph(data) {
       .attr('width', width)
       .attr('height', height)
       .style('background', 'var(--bg)');
-    console.log('[topology] SVG created:', !!svg);
   } catch(e) {
     console.error('[topology] SVG creation failed:', e);
     stateEl.style.display = 'flex';
-    msgEl.innerHTML = `<span style="color:var(--red)">⚠️ D3 SVG Error: ${escapeHtml(e.message)}</span>`;
+    msgEl.innerHTML = `<span style="color:var(--red)">⚠️ Failed to load topology: ${escapeHtml(e.message)}</span>`;
     return;
   }
 
   // ── Arrow marker defs ──
-  let defs;
-  try {
-    defs = svg.append('defs');
-  } catch(e) {
-    console.error('[topology] defs append failed:', e);
-    stateEl.style.display = 'flex';
-    msgEl.innerHTML = `<span style="color:var(--red)">⚠️ Defs Error: ${escapeHtml(e.message)}</span>`;
-    return;
-  }
+  const defs = svg.append('defs');
 
   defs.append('marker')
     .attr('id', 'arrow-handoff')
@@ -904,30 +895,18 @@ function renderTopologyGraph(data) {
     .attr('fill', '#6366f1');
 
   // ── Zoom behavior ──
-  let g, zoomBehavior;
-  try {
-    g = svg.append('g');
+  const g = svg.append('g');
 
-    zoomBehavior = d3.zoom()
-      .scaleExtent([0.1, 4])
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform);
-      });
+  const zoomBehavior = d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', (event) => {
+      g.attr('transform', event.transform);
+    });
 
-    svg.call(zoomBehavior);
-  } catch(e) {
-    console.error('[topology] zoom setup failed:', e);
-    stateEl.style.display = 'flex';
-    msgEl.innerHTML = `<span style="color:var(--red)">⚠️ Zoom Error: ${escapeHtml(e.message)}</span>`;
-    return;
-  }
+  svg.call(zoomBehavior);
 
   // Make zoom behavior accessible for programmatic control
-  try {
-    svg.property('__zoomBehavior', zoomBehavior);
-  } catch(e) {
-    console.error('[topology] property set failed:', e);
-  }
+  window.__topologyZoom = zoomBehavior;
 
   // ── Links group ──
   const linkGroup = g.append('g').attr('class', 'links');
@@ -936,24 +915,17 @@ function renderTopologyGraph(data) {
   const nodeGroup = g.append('g').attr('class', 'nodes');
 
   // ── Force simulation ──
-  let simulation;
-  try {
-    simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links)
-        .id(d => d.id)
-        .distance(150)
-      )
-      .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide(50))
-      .alphaDecay(0.02);
-    topologySimulation = simulation;
-  } catch(e) {
-    console.error('[topology] simulation failed:', e);
-    stateEl.style.display = 'flex';
-    msgEl.innerHTML = `<span style="color:var(--red)">⚠️ Simulation Error: ${escapeHtml(e.message)}</span>`;
-    return;
-  }
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links)
+      .id(d => d.id)
+      .distance(150)
+    )
+    .force('charge', d3.forceManyBody().strength(-400))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collide', d3.forceCollide(50))
+    .alphaDecay(0.02);
+
+  topologySimulation = simulation;
 
   // ── Draw links ──
   const link = linkGroup.selectAll('g.link')
@@ -1153,30 +1125,27 @@ function renderTopologyGraph(data) {
 // ─── Topology: Zoom Controls ─────────────────────
 function topologyZoomIn() {
   if (typeof d3 === 'undefined') return;
-  const container = document.getElementById('topology-container');
-  const svg = container?.querySelector('svg');
-  if (!svg) return;
-  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  const zoomBehavior = window.__topologyZoom;
   if (!zoomBehavior) return;
-  d3.select(svg).transition().duration(300).call(zoomBehavior.scaleBy, 1.4);
+  const svg = d3.select('svg');
+  if (svg.empty()) return;
+  svg.transition().duration(300).call(zoomBehavior.scaleBy, 1.4);
 }
 
 function topologyZoomOut() {
-  const container = document.getElementById('topology-container');
-  const svg = container?.querySelector('svg');
-  if (!svg) return;
-  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  const zoomBehavior = window.__topologyZoom;
   if (!zoomBehavior) return;
-  d3.select(svg).transition().duration(300).call(zoomBehavior.scaleBy, 0.7);
+  const svg = d3.select('svg');
+  if (svg.empty()) return;
+  svg.transition().duration(300).call(zoomBehavior.scaleBy, 0.7);
 }
 
 function topologyResetZoom() {
-  const container = document.getElementById('topology-container');
-  const svg = container?.querySelector('svg');
-  if (!svg) return;
-  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  const zoomBehavior = window.__topologyZoom;
   if (!zoomBehavior) return;
-  d3.select(svg).transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity);
+  const svg = d3.select('svg');
+  if (svg.empty()) return;
+  svg.transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity);
 }
 
 function topologyFitToScreen() {
@@ -1185,7 +1154,7 @@ function topologyFitToScreen() {
   const graphGroup = container?.querySelector('svg g');
   if (!svg || !graphGroup) return;
 
-  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  const zoomBehavior = window.__topologyZoom;
   if (!zoomBehavior) return;
 
   // Get bounding box of all graph elements
