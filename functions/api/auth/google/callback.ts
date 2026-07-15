@@ -66,6 +66,8 @@ export async function onRequest(context) {
       'SELECT id, email, name, plan FROM users WHERE email = ?'
     ).bind(googleUser.email).first();
 
+    let newApiKeyId = null;
+
     if (!user) {
       // Create new user
       const userId = randomHex(16);
@@ -82,12 +84,12 @@ export async function onRequest(context) {
       ).bind(projectId, userId, 'default').run();
 
       // Create default API key
-      const apiKeyId = `ad_${randomHex(32)}`;
+      newApiKeyId = `ad_${randomHex(32)}`;
       const keySalt = randomHex(16);
-      const keyHash = await hashPassword(apiKeyId, keySalt);
+      const keyHash = await hashPassword(newApiKeyId, keySalt);
       await env.DB.prepare(
         'INSERT INTO api_keys (id, user_id, name, project_id, key_hash) VALUES (?, ?, ?, ?, ?)'
-      ).bind(apiKeyId, userId, 'default', projectId, keyHash).run();
+      ).bind(newApiKeyId, userId, 'default', projectId, keyHash).run();
 
       user = { id: userId, email: googleUser.email, name: userName, plan: 'free' };
     }
@@ -96,10 +98,15 @@ export async function onRequest(context) {
     const sessionId = await createSession(env.DB, user.id);
 
     // Redirect to dashboard with session cookie
+    // If new user, pass API key in query param so frontend can show it
+    const redirectPath = newApiKeyId
+      ? `/app?new_key=${encodeURIComponent(newApiKeyId)}`
+      : '/app';
+
     return new Response(null, {
       status: 302,
       headers: {
-        Location: '/app',
+        Location: redirectPath,
         'Set-Cookie': sessionCookie(sessionId),
       },
     });

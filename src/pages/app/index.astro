@@ -171,6 +171,29 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
   </div>
 </div>
 
+<!-- New API Key Modal (shown after Google signup) -->
+<div class="modal-overlay" id="new-key-modal">
+  <div class="modal">
+    <h3>🎉 Welcome to Agent Debugger!</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Your account and project are ready. Save your API key now — it will not be shown again:</p>
+    <div class="new-key-display">
+      <code id="new-key-value" style="font-size:13px;word-break:break-all;color:var(--green);background:rgba(34,197,94,.1);padding:6px 10px;border-radius:4px;display:inline-block;max-width:100%"></code>
+    </div>
+    <div class="new-key-warning" style="font-size:11px;color:var(--amber);margin-top:8px">⚠️ This is the only time you'll see this key</div>
+    <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-primary" onclick="dismissNewKey()">I've saved it</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:20px}
+.modal h3{font-size:16px;margin-bottom:8px}
+.new-key-display{background:var(--bg);border:1px solid var(--green);border-radius:var(--radius);padding:14px;margin:12px 0;text-align:center}
+</style>
+
 <!-- Loading state -->
 <div id="loading-screen" class="loading" style="padding-top:80px">Checking authentication</div>
 
@@ -223,6 +246,16 @@ async function checkAuth() {
     document.getElementById('loading-screen').style.display = 'none';
 
     loadTraces();
+
+    // Check if redirected from Google signup with a new API key
+    const params = new URLSearchParams(window.location.search);
+    const newKey = params.get('new_key');
+    if (newKey) {
+      document.getElementById('new-key-value').textContent = newKey;
+      document.getElementById('new-key-modal').classList.add('show');
+      // Clean URL without reloading
+      window.history.replaceState({}, '', '/app');
+    }
   } catch (e) {
     // Redirect to login
     window.location.href = '/app/login';
@@ -231,6 +264,10 @@ async function checkAuth() {
 
 function toggleUserMenu() {
   document.getElementById('user-dropdown').classList.toggle('show');
+}
+
+function dismissNewKey() {
+  document.getElementById('new-key-modal').classList.remove('show');
 }
 
 // Close dropdown on click outside
@@ -500,6 +537,7 @@ window.renderTraces = renderTraces;
 window.switchProject = switchProject;
 window.logout = logout;
 window.toggleUserMenu = toggleUserMenu;
+window.dismissNewKey = dismissNewKey;
 
 // Init
 checkAuth();
