@@ -113,6 +113,11 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 </div>
 
 <script is:inline>
+// Redirect to dashboard if already logged in
+fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => {
+  if (r.ok) window.location.href = '/app';
+}).catch(() => {});
+
 document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('submit-btn');
