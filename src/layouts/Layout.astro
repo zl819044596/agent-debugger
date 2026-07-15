@@ -68,5 +68,16 @@ const { title = 'Agent Debugger - Multi-Agent Debugging & Monitoring Platform' }
         </div>
       </div>
     </footer>
+    <script is:inline>
+    // If logged in, show Dashboard link instead of Sign In
+    fetch('/api/auth/me',{credentials:'same-origin'}).then(r=>{
+      if(r.ok){
+        var nav=document.querySelector('nav a[href*=\"/app/login\"]');
+        if(nav){nav.href='/app';nav.textContent='Dashboard';}
+        var cta=document.querySelector('a[href*=\"/app/register\"].btn-primary');
+        if(cta){cta.href='/app';cta.textContent='Dashboard →';}
+      }
+    }).catch(function(){});
+    </script>
   </body>
 </html>
