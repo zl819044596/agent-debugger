@@ -2,12 +2,24 @@
 import { randomHex } from '../_auth';
 
 export async function onRequest(context) {
-  const { request, env } = context;
+  const { request } = context;
+  const env = context.env;  // explicit access
 
   const origin = new URL(request.url).origin;
   const redirectUri = `${origin}/api/auth/google/callback`;
 
-  // Generate CSRF state, store in D1
+  const clientId = env.GOOGLE_CLIENT_ID;
+  const clientSecret = env.GOOGLE_CLIENT_SECRET;
+
+  // Debug: if missing, show error
+  if (!clientId || !clientSecret) {
+    return new Response(
+      `Google OAuth not configured. GOOGLE_CLIENT_ID=${typeof clientId} GOOGLE_CLIENT_SECRET=${typeof clientSecret}`,
+      { status: 500 }
+    );
+  }
+
+  // Generate CSRF state
   const state = randomHex(32);
   await env.DB.prepare(
     'INSERT INTO oauth_states (state, redirect_to, expires_at) VALUES (?, ?, datetime(\'now\', \'+10 minutes\'))'
@@ -15,7 +27,7 @@ export async function onRequest(context) {
 
   // Build Google OAuth URL
   const params = new URLSearchParams({
-    client_id: env.GOOGLE_CLIENT_ID,
+    client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'openid email profile',
