@@ -160,11 +160,14 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
     <div class="user-menu" id="user-menu">
       <button class="user-menu-btn" onclick="toggleUserMenu()">
         <span id="user-email">Account</span>
+        <span class="plan-badge" id="plan-badge" style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;display:none"></span>
         <span style="font-size:10px">▾</span>
       </button>
       <div class="user-menu-dropdown" id="user-dropdown">
         <a href="/app/settings">⚙️ API Keys</a>
         <a href="/app/settings">📁 Projects</a>
+        <div class="divider"></div>
+        <button id="upgrade-btn" onclick="upgradeToPro()" style="color:var(--accent);font-weight:600">⬆️ Upgrade to Pro</button>
         <div class="divider"></div>
         <button onclick="logout()">🚪 Sign Out</button>
       </div>
@@ -301,6 +304,30 @@ async function checkAuth() {
 
     currentProjectId = projects[0].id;
     document.getElementById('user-email').textContent = user.email;
+
+    // Show plan badge
+    const badge = document.getElementById('plan-badge');
+    const upgradeBtn = document.getElementById('upgrade-btn');
+    if (badge) {
+      if (user.plan === 'pro') {
+        badge.textContent = 'PRO';
+        badge.style.display = 'inline-block';
+        badge.style.background = 'rgba(99,102,241,0.2)';
+        badge.style.color = '#818cf8';
+        if (upgradeBtn) upgradeBtn.style.display = 'none';
+      } else {
+        badge.textContent = 'FREE';
+        badge.style.display = 'inline-block';
+        badge.style.background = 'rgba(113,113,122,0.2)';
+        badge.style.color = '#71717a';
+        if (upgradeBtn) upgradeBtn.style.display = 'block';
+      }
+    }
+
+    // Handle upgrade success from Creem redirect
+    if (params.get('upgrade') === 'success') {
+      showUpgradeSuccess();
+    }
 
     // Populate project selector
     const select = document.getElementById('project-select');
@@ -1194,6 +1221,75 @@ function topologyUnpinNode(event, d) {
   }
 }
 
+// ─── Payments: Upgrade to Pro ────────────────────
+async function upgradeToPro() {
+  const btn = document.getElementById('upgrade-btn');
+  const originalText = btn.textContent;
+  btn.textContent = '⏳ Creating checkout...';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('/api/payments/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        price_id: 'pro',
+        success_url: window.location.origin + '/app?upgrade=success',
+        cancel_url: window.location.href,
+      }),
+    });
+
+    const data = await r.json();
+    if (!r.ok) {
+      alert(data.error || 'Failed to create checkout');
+      btn.textContent = originalText;
+      btn.disabled = false;
+      return;
+    }
+
+    if (data.already_pro) {
+      alert('You already have a Pro plan!');
+      btn.textContent = originalText;
+      btn.disabled = false;
+      return;
+    }
+
+    if (data.checkout_url) {
+      window.location.href = data.checkout_url;
+    } else {
+      alert('No checkout URL returned');
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  } catch (e) {
+    alert('Network error: ' + e.message);
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
+function showUpgradeSuccess() {
+  // Clean URL
+  const params = new URLSearchParams(window.location.search);
+  params.delete('upgrade');
+  const newUrl = params.toString() ? `/app?${params.toString()}` : '/app';
+  window.history.replaceState({}, '', newUrl);
+
+  // Show success notification
+  const existing = document.querySelector('.upgrade-success');
+  if (existing) existing.remove();
+
+  const banner = document.createElement('div');
+  banner.className = 'upgrade-success';
+  banner.style.cssText = 'background:rgba(34,197,94,0.15);border:1px solid var(--green);border-radius:var(--radius);padding:16px;margin-bottom:16px;font-size:14px;color:var(--green);font-weight:600';
+  banner.innerHTML = '🎉 Upgrade successful! Your account is now Pro. Refresh to see your new features.';
+
+  const container = document.querySelector('.container');
+  if (container && container.firstChild) {
+    container.insertBefore(banner, container.firstChild);
+  }
+}
+
 // ─── Expose to Global Scope (for HTML onclick handlers) ────
 window.showTrace = showTrace;
 window.toggleStep = toggleStep;
@@ -1215,6 +1311,7 @@ window.topologyResetZoom = topologyResetZoom;
 window.topologyFitToScreen = topologyFitToScreen;
 window.viewAgentTraces = viewAgentTraces;
 window.clearAgentFilter = clearAgentFilter;
+window.upgradeToPro = upgradeToPro;
 
 // ─── Initialize ──────────────────────────────────────────────
 checkAuth();
