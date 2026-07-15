@@ -1,0 +1,174 @@
+---
+title: 'LLM Observability 101: Token Tracking, Cost Analysis, and Performance Monitoring for AI Agents'
+description: 'A practical guide to LLM observability — tracking token usage, analyzing costs, monitoring latency, and optimizing performance of AI agents across all major frameworks.'
+pubDate: 2026-07-15
+readTime: 9
+category: 'Technical'
+tags: ['llm observability', 'token tracking ai agents', 'llm cost analysis', 'ai agent performance monitoring', 'agent trace viewer']
+---
+
+Every LLM call costs money. Every token your agent consumes adds to the bill. But most teams don't have visibility into **where** those tokens are going.
+
+Is your agent spending most of its budget on thinking steps or tool calls? Which agent in your multi-agent system is the most expensive? Are certain user queries driving disproportionate costs?
+
+LLM observability answers these questions. This guide covers the four pillars of LLM observability for AI agents: **token tracking, cost analysis, latency monitoring, and performance optimization**.
+
+## The Four Pillars of LLM Observability
+
+### 1. Token Tracking
+
+Token tracking is the foundation. Every step your agent takes consumes tokens — thinking, tool calls, tool results, and final responses.
+
+**What to track per step:**
+
+| Metric | Why It Matters |
+|--------|---------------|
+| Input tokens | How much context is being sent |
+| Output tokens | How much the agent generates |
+| Total tokens | Aggregate consumption per trace |
+| Token by step type | Which steps cost the most (thinking vs tool calls) |
+
+With per-step token tracking, you can answer questions like:
+
+- "Why is this trace so expensive?" → Find the step with the highest token count
+- "Is my agent prompting too much context?" → Check input token trends
+- "Are tool call results bloating the context window?" → Inspect tool output sizes
+
+### 2. Cost Analysis
+
+Tokens translate to real costs. With per-step cost tracking, you can:
+
+- **See the exact cost of each agent interaction** — down to the penny
+- **Compare costs across agents** — which agent is the most expensive to run?
+- **Track cost trends over time** — is your spend growing linearly or spiking?
+- **Set budget alerts** — get notified when costs exceed thresholds
+
+```python
+# Example: Cost breakdown for a single trace
+{
+  "trace_id": "abc123",
+  "total_cost": "$0.0084",
+  "breakdown": {
+    "thinking_steps": "$0.0032 (38%)",
+    "tool_calls": "$0.0018 (21%)",
+    "tool_results": "$0.0024 (29%)",
+    "final_output": "$0.0010 (12%)"
+  }
+}
+```
+
+Pro tip: Most teams underestimate their LLM costs by 2-3x because they only track total API spend, not per-agent or per-request costs. Per-trace cost tracking reveals the true picture.
+
+### 3. Latency Monitoring
+
+Latency is the silent killer of agent user experience. A 2-second increase in response time can cut user satisfaction by 30%.
+
+**What to measure:**
+
+- **Per-step latency** — which steps take the longest?
+- **Tool call latency** — are external API calls slowing things down?
+- **Thinking time** — how long does the agent spend reasoning vs. acting?
+- **End-to-end trace time** — total time from request to response
+
+Common latency patterns:
+
+| Pattern | Symptom | Cause |
+|---------|---------|-------|
+| Slow thinking | High latency on "think" steps | Model too large for task; consider smaller model |
+| Slow tools | High latency on "tool_call" steps | External API latency; implement caching |
+| Context bloat | Increasing latency over trace steps | Context window growing; implement truncation |
+| Cold start | First trace is slow, others fast | Model loading overhead; keep warm |
+
+### 4. Performance Optimization
+
+Once you have token, cost, and latency data, you can optimize:
+
+**Prompt Compression**
+If your agent consistently sends large inputs, consider:
+- Truncating conversation history after N turns
+- Summarizing past steps instead of including full context
+- Using a smaller, faster model for routine steps
+
+**Model Selection**
+Not every step needs GPT-4 or Claude 3.5:
+- Use small/fast models for classification and routing
+- Use medium models for knowledge retrieval
+- Use large models only for complex reasoning and final output
+
+```python
+# Intelligent model routing
+router = Agent(model="gpt-4o-mini")    # Fast, cheap classification
+knowledge = Agent(model="gpt-4o-mini")  # Sufficient for retrieval
+composer = Agent(model="gpt-4o")        # Full power for final response
+```
+
+**Token Budgeting**
+Set limits on per-trace token usage:
+- Warn at 80% of budget
+- Alert at 100%
+- Fail gracefully with a fallback response
+
+**Caching**
+Cache tool call results that return identical or similar outputs:
+- Knowledge base lookups
+- API responses
+- Common calculations
+
+## LLM Observability in Practice
+
+### Setting Up Observability for Your Agents
+
+The easiest way to get started is with an **agent trace viewer** that automatically captures token, cost, and latency data for every step.
+
+Agent Debugger captures all these metrics automatically:
+
+```python
+from agent_debugger import trace
+
+@trace(agent_name="support-agent")
+def handle_ticket(ticket_id):
+    # Every thinking step, tool call, and result
+    # is automatically tracked with tokens, cost, and latency
+    return response
+```
+
+No manual instrumentation needed. The SDK captures:
+- ✅ Input/output tokens per step
+- ✅ Cost per step (based on the model used)
+- ✅ Latency per step
+- ✅ Total trace cost and duration
+- ✅ Error tracking with stack traces
+
+### What to Monitor Daily
+
+| Metric | Good | Warning | Critical |
+|--------|------|---------|----------|
+| Avg tokens per trace | < 2K | 2K-5K | > 5K |
+| Avg cost per trace | < $0.01 | $0.01-$0.05 | > $0.05 |
+| Error rate | < 1% | 1%-5% | > 5% |
+| P95 latency | < 5s | 5s-15s | > 15s |
+| Cost per user | < $0.10 | $0.10-$0.50 | > $0.50 |
+
+### Cost Comparison: Models for Agent Workflows
+
+| Model | Cost/1K Input | Cost/1K Output | Best For |
+|-------|--------------|---------------|----------|
+| GPT-4o-mini | $0.15 | $0.60 | Classification, routing |
+| GPT-4o | $2.50 | $10.00 | Complex reasoning |
+| Claude 3 Haiku | $0.25 | $1.25 | Fast retrieval |
+| Claude 3.5 Sonnet | $3.00 | $15.00 | Final composition |
+| DeepSeek V3 | $0.27 | $1.10 | Cost-sensitive workloads |
+| Llama 3 70B | $0.35 | $0.40 | Self-hosted, high volume |
+
+Using the right model for each step can reduce costs by **5-10x** without sacrificing quality.
+
+## Getting Started with LLM Observability
+
+Ready to track every token and every dollar your agents spend?
+
+1. **Sign up** at [debug.getfitai.io/app/register](https://debug.getfitai.io/app/register)
+2. **Install the SDK**: `pip install agent-debugger-sdk`
+3. **Add tracing**: Decorate your agent functions with `@trace()`
+4. **View your dashboard**: See tokens, costs, and latency for every trace
+
+Your first 1,000 traces are free — no credit card required.

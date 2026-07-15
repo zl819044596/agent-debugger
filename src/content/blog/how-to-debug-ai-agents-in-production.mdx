@@ -1,0 +1,133 @@
+---
+title: 'How to Debug AI Agents in Production: A Step-by-Step Guide'
+description: 'Learn how to debug AI agents running in production. Step-by-step guide to tracing agent behavior, finding root causes, and monitoring LLM performance in real-world applications.'
+pubDate: 2026-07-15
+readTime: 10
+category: 'Tutorials'
+tags: ['how to debug ai agents', 'ai agent debugging', 'debug ai agents', 'agent debugging tool', 'ai agent monitoring']
+---
+
+You've deployed your AI agent to production. Users are interacting with it. And then — it starts making mistakes.
+
+The agent returns wrong answers, takes too long to respond, or silently fails on certain tool calls. Without proper debugging tools, finding the root cause means digging through raw JSON logs, guessing which step went wrong, and hoping you can reproduce the issue.
+
+This guide walks through a **practical, step-by-step workflow** for debugging AI agents in production, from basic tracing to advanced failure analysis.
+
+## Step 1: Capture Every Step With Traces
+
+The foundation of agent debugging is **tracing** — capturing every step an agent takes, in order, with full context.
+
+A good trace should capture:
+
+- **Thinking** — what the agent's reasoning was at each step
+- **Tool calls** — which tool was invoked and with what input
+- **Tool results** — what the tool returned (including errors)
+- **Token usage** — how many tokens each step consumed
+- **Latency** — how long each step took
+- **Errors** — any failures or unexpected behavior
+
+Without per-step tracing, you're debugging blind. With it, you can replay the entire agent conversation step by step, seeing exactly what happened and when.
+
+```python
+from agent_debugger import trace
+
+@trace(agent_name="customer-support")
+def handle_query(query):
+    # Agent logic here — every thinking step,
+    # tool call, and result is automatically captured
+    return response
+```
+
+## Step 2: Identify Failure Patterns
+
+Once you have traces flowing, the next step is **pattern recognition**. Common failure modes in production agents include:
+
+### Tool Call Failures
+The agent calls a tool with incorrect parameters, or the tool returns an unexpected error. In your trace viewer, look for steps where the status is "error" and the step type is "tool_call" or "tool_result".
+
+### Reasoning Loops
+The agent gets stuck in a loop — calling the same tool repeatedly with slightly different parameters. This shows up as a sequence of identical or near-identical steps.
+
+### Token Budget Exhaustion
+The agent runs out of tokens mid-conversation and produces a truncated or nonsensical response. Check traces where total token usage is suspiciously close to the limit.
+
+### Hallucinated Outputs
+The most difficult to catch — the agent produces confident-sounding but incorrect information. Look for traces where the final output contradicts available tool results.
+
+## Step 3: Use Filters and Search to Find Problematic Traces
+
+In production, you might have thousands of traces per day. Effective debugging requires **filtering and search**:
+
+- **Filter by status** — show only failed or errored traces
+- **Filter by latency** — find traces that took abnormally long
+- **Filter by agent name** — isolate a specific agent
+- **Search by trace ID** — find a specific user's session
+- **Search by agent name** — find all traces for a particular workflow
+
+Most trace viewers also provide **aggregated statistics** — how many traces failed today, average latency, total token consumption, and cost breakdown.
+
+## Step 4: Replay and Inspect Step by Step
+
+When you've identified a problematic trace, the most powerful debugging technique is **replay** — watching the agent's steps unfold one at a time, just as they happened.
+
+A good replay experience shows:
+
+1. **The agent's thinking** — what it was considering before each action
+2. **The tool inputs** — exactly what was sent
+3. **The tool outputs** — what came back
+4. **The decision point** — how the agent chose what to do next
+
+This is the closest thing to a debugger for AI agents. By stepping through a failed trace, you can see the exact moment things went wrong — whether it was a misunderstood instruction, a tool returning unexpected data, or the agent making a poor decision.
+
+## Step 5: Multi-Agent Debugging (When Agents Talk to Each Other)
+
+Modern agent systems often use **multiple specialized agents** that collaborate. A customer support system might have:
+
+- A **router agent** that classifies the query
+- A **knowledge base agent** that searches documentation
+- A **ticketing agent** that creates support tickets
+- A **response agent** that composes the final answer
+
+When one of these agents fails, the error can propagate through the chain. Multi-agent debugging requires **parent-child tracing** — seeing which agent called which, and where the failure originated.
+
+Look for:
+
+- **Handoff errors** — Agent A passed context to Agent B, but Agent B couldn't process it
+- **Missing context** — Information was lost during the agent-to-agent handoff
+- **Circular delegation** — Agents passing work back and forth without making progress
+
+## Step 6: Set Up Production Monitoring
+
+Once you've established a debugging workflow, the next step is **continuous monitoring**:
+
+- **Error rate alerts** — get notified when your agent's failure rate spikes
+- **Latency monitoring** — detect when agents are taking too long
+- **Cost tracking** — monitor token consumption and LLM API costs
+- **Budget thresholds** — set limits on monthly spend with alerting
+
+Monitoring turns agent debugging from reactive (finding bugs after users report them) to proactive (catching issues before they impact users).
+
+## Why Traditional Monitoring Falls Short
+
+Traditional application monitoring (APM) tools were designed for deterministic, request-response systems. They track:
+- HTTP status codes
+- Response times
+- Error rates
+
+But AI agents are fundamentally different:
+- **Non-deterministic** — the same input can produce different behavior
+- **Multi-step** — each trace contains dozens of decisions, each of which could fail
+- **Token-dependent** — cost and quality are tied to token consumption, which traditional tools don't track
+
+That's why purpose-built **agent debugging tools** like Agent Debugger exist — to give you the visibility you need to build reliable agent systems.
+
+## Getting Started
+
+Ready to debug your AI agents?
+
+1. **Install the SDK**: `pip install agent-debugger-sdk`
+2. **Get your API key**: Sign up at [debug.getfitai.io](https://debug.getfitai.io/app/register)
+3. **Instrument your agent**: Add the `@trace` decorator to your agent functions
+4. **View traces**: Open the dashboard at [debug.getfitai.io/app](https://debug.getfitai.io/app)
+
+Your traces appear in real-time — no waiting, no configuration.
