@@ -258,6 +258,11 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
 </div>
 
 <script is:inline>
+// ═══════════════════════════════════════════════════════════════
+// Dashboard App — Agent Debugger
+// ═══════════════════════════════════════════════════════════════
+(() => {
+// ─── State ────────────────────────────────────────────────────
 const API = '';
 
 let user = null;
@@ -271,8 +276,13 @@ let replayInterval = null;
 let replayActive = false;
 let filterAgentName = null; // used when navigating from topology "View Traces"
 
-// Auth check
+// ─── Auth & Init ─────────────────────────────────────────────
 async function checkAuth() {
+  // Read URL params FIRST — before any async work that could redirect
+  const params = new URLSearchParams(window.location.search);
+  const newKey = params.get('new_key');
+  const agentParam = params.get('agent_name');
+
   try {
     const r = await fetch('/api/auth/me', { credentials: 'same-origin' });
     if (!r.ok) throw new Error('Not authenticated');
@@ -284,6 +294,8 @@ async function checkAuth() {
       document.getElementById('app').style.display = 'block';
       document.getElementById('trace-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">No projects yet. <a href="/app/settings" style="color:var(--accent)">Create one</a></div>';
       document.getElementById('loading-screen').style.display = 'none';
+      // Still show new_key modal even without projects
+      if (newKey) showNewKeyModal(newKey);
       return;
     }
 
@@ -299,20 +311,14 @@ async function checkAuth() {
     document.getElementById('app').style.display = 'block';
     document.getElementById('loading-screen').style.display = 'none';
 
-    loadTraces();
+    // Show new_key modal FIRST — before any async work that could throw
+    // and prevent the modal from appearing (e.g. loadTraces network error)
+    if (newKey) showNewKeyModal(newKey);
 
-    // Check if redirected from Google signup with a new API key
-    const params = new URLSearchParams(window.location.search);
-    const newKey = params.get('new_key');
-    if (newKey) {
-      document.getElementById('new-key-value').textContent = newKey;
-      document.getElementById('new-key-modal').classList.add('show');
-      // Clean URL without reloading
-      window.history.replaceState({}, '', '/app');
-    }
+    // Load traces — don't let errors block the rest of init
+    try { await loadTraces(); } catch (e) { console.error('Failed to load traces:', e); }
 
-    // Check for agent filter from URL (navigated from topology "View Traces")
-    const agentParam = params.get('agent_name');
+    // Handle agent filter from URL (navigated from topology "View Traces")
     if (agentParam) {
       filterAgentName = agentParam;
       // Clean agent_name from URL, keep other params
@@ -323,18 +329,20 @@ async function checkAuth() {
       setTimeout(() => {
         switchTab('traces');
         renderTraces();
-        // Scroll to top and show filter indicator
         document.querySelector('.container').scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
   } catch (e) {
-    // Redirect to login
     window.location.href = '/app/login';
   }
 }
 
-function toggleUserMenu() {
-  document.getElementById('user-dropdown').classList.toggle('show');
+// ─── Modal Helpers ───────────────────────────────────────────
+function showNewKeyModal(key) {
+  document.getElementById('new-key-value').textContent = key;
+  document.getElementById('new-key-modal').classList.add('show');
+  // Clean URL without reloading
+  window.history.replaceState({}, '', '/app');
 }
 
 function dismissNewKey() {
@@ -354,7 +362,7 @@ function copyNewKey() {
       btn.classList.remove('copied');
     }, 2000);
   }).catch(() => {
-    // Fallback: select and execCommand
+    // Fallback for older browsers
     const range = document.createRange();
     range.selectNodeContents(keyEl);
     const sel = window.getSelection();
@@ -372,6 +380,11 @@ function copyNewKey() {
   });
 }
 
+// ─── User Menu ───────────────────────────────────────────────
+function toggleUserMenu() {
+  document.getElementById('user-dropdown').classList.toggle('show');
+}
+
 // Close dropdown on click outside
 document.addEventListener('click', (e) => {
   if (!e.target.closest('.user-menu')) {
@@ -379,11 +392,13 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// ─── Auth Actions ────────────────────────────────────────────
 async function logout() {
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
   window.location.href = '/app/login';
 }
 
+// ─── Project & API Helpers ──────────────────────────────────
 async function switchProject(projectId) {
   currentProjectId = projectId;
   loadTraces();
@@ -403,6 +418,7 @@ async function fetchAPI(path) {
   return r.json();
 }
 
+// ─── Trace Loading & Rendering ──────────────────────────────
 async function loadTraces() {
   if (!currentProjectId) return;
   const data = await fetchAPI(`/api/traces?project_id=${currentProjectId}&limit=100`);
@@ -493,6 +509,7 @@ function renderTraces() {
   `).join('');
 }
 
+// ─── Trace Detail View ──────────────────────────────────────
 async function showTrace(traceId) {
   document.getElementById('tab-traces').style.display = 'none';
   document.getElementById('detail-view').classList.add('active');
@@ -600,7 +617,7 @@ function showListView() {
   stopReplay();
 }
 
-// Replay
+// ─── Step Replay ────────────────────────────────────────────
 function resetReplay() {
   replayIndex = -1;
   stopReplay();
@@ -676,6 +693,7 @@ function switchTab(tab) {
   }
 }
 
+// ─── Agent Filter (from Topology) ──────────────────────────
 // Navigate from topology node detail to filtered traces view
 function viewAgentTraces(agentName) {
   filterAgentName = agentName;
@@ -983,6 +1001,10 @@ function renderTopologyGraph(data) {
   // ── Click handler: show agent detail ──
   let clickTimer = null;
   node.on('click', (event, d) => {
+    // Stop propagation IMMEDIATELY (not inside setTimeout) to prevent
+    // the SVG background click handler from removing the info panel
+    event.stopPropagation();
+
     // Distinguish single from double click
     if (clickTimer) {
       clearTimeout(clickTimer);
@@ -993,7 +1015,6 @@ function renderTopologyGraph(data) {
     }
     clickTimer = setTimeout(() => {
       clickTimer = null;
-      event.stopPropagation();
       // Highlight clicked node
       node.selectAll('circle').attr('opacity', 0.3);
       node.selectAll('text').attr('opacity', 0.3);
@@ -1006,7 +1027,8 @@ function renderTopologyGraph(data) {
 
       const info = document.createElement('div');
       info.className = 'topology-node-info';
-      info.style.cssText = 'position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:12px;z-index:10;min-width:200px;max-width:260px;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+      const containerRect = container.getBoundingClientRect();
+      info.style.cssText = `position:fixed;top:${containerRect.top + 12}px;right:${window.innerWidth - containerRect.right + 12}px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:12px;z-index:10;min-width:200px;max-width:260px;box-shadow:0 4px 20px rgba(0,0,0,0.3)`;
       info.innerHTML = `
         <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text);display:flex;align-items:center;gap:6px">
           <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${d.fillColor}"></span>
@@ -1034,11 +1056,14 @@ function renderTopologyGraph(data) {
   });
 
   // ── Click background to deselect ──
-  svg.on('click', () => {
-    node.selectAll('circle').attr('opacity', 0.9);
-    node.selectAll('text').attr('opacity', 1);
-    const info = container.querySelector('.topology-node-info');
-    if (info) info.remove();
+  svg.on('click', (event) => {
+    // Only deselect when clicking on SVG background (not on nodes or info panel)
+    if (event.target === svg.node() || event.target.tagName === 'rect') {
+      node.selectAll('circle').attr('opacity', 0.9);
+      node.selectAll('text').attr('opacity', 1);
+      const info = container.querySelector('.topology-node-info');
+      if (info) info.remove();
+    }
   });
 
   // ── Stop simulation after settling ──
@@ -1151,7 +1176,7 @@ function topologyUnpinNode(event, d) {
   }
 }
 
-// Expose functions to HTML onclick
+// ─── Expose to Global Scope (for HTML onclick handlers) ────
 window.showTrace = showTrace;
 window.toggleStep = toggleStep;
 window.showListView = showListView;
@@ -1173,8 +1198,10 @@ window.topologyFitToScreen = topologyFitToScreen;
 window.viewAgentTraces = viewAgentTraces;
 window.clearAgentFilter = clearAgentFilter;
 
-// Init
+// ─── Initialize ──────────────────────────────────────────────
 checkAuth();
+
+})(); // End IIFE
 </script>
 </body>
 </html>

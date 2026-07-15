@@ -33,9 +33,41 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .logo-text{font-size:16px;font-weight:700}
 .logo-text span{color:var(--accent)}
 .input-hint{font-size:11px;color:var(--text2);margin-top:4px}
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:20px}
+.modal h3{font-size:16px;margin-bottom:8px}
+.new-key-display{background:var(--bg);border:1px solid var(--green);border-radius:var(--radius);padding:14px;margin:12px 0;text-align:center}
+.new-key-display code{font-size:13px;word-break:break-all;color:var(--green);background:rgba(34,197,94,.1);padding:6px 10px;border-radius:4px;display:inline-block;max-width:100%}
+.new-key-warning{font-size:11px;color:var(--amber);margin-top:8px}
+.btn-sm{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-copy{background:var(--border);color:var(--text)}
+.btn-copy:hover{background:#3f3f46}
+.btn-copy.copied{background:var(--green);color:#fff}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 </style>
 </head>
 <body>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="new-key-modal">
+  <div class="modal">
+    <h3>🎉 Account Created!</h3>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Save your API key now — it will not be shown again:</p>
+    <div class="new-key-display">
+      <code id="new-key-value" style="font-size:13px;word-break:break-all;color:var(--green);background:rgba(34,197,94,.1);padding:6px 10px;border-radius:4px;display:inline-block;max-width:100%"></code>
+    </div>
+    <div class="new-key-warning">⚠️ This is the only time you'll see this key</div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-copy" onclick="copyNewKey()" id="copy-key-btn">📋 Copy Key</button>
+      <button class="btn-sm btn-primary" onclick="goToDashboard()">Go to Dashboard →</button>
+    </div>
+  </div>
+</div>
+
 <div class="auth-box">
   <div class="logo">
     <span class="logo-dot"></span>
@@ -110,9 +142,8 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
       return;
     }
 
-    // Show API key once
-    alert(`Account created!\n\nYour API key (save it now — won't be shown again):\n${data.api_key}`);
-    window.location.href = '/app';
+    // Show API key in custom modal
+    showApiKeyModal(data.api_key);
   } catch (e) {
     err.textContent = 'Network error. Please try again.';
     err.style.display = 'block';
@@ -120,6 +151,47 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     btn.textContent = 'Create Account';
   }
 });
+
+// ─── Modal Helpers ───────────────────────────────────────────
+function showApiKeyModal(key) {
+  document.getElementById('new-key-value').textContent = key;
+  document.getElementById('new-key-modal').classList.add('show');
+}
+
+function copyNewKey() {
+  const keyEl = document.getElementById('new-key-value');
+  const key = keyEl.textContent;
+  if (!key) return;
+  navigator.clipboard.writeText(key).then(() => {
+    const btn = document.getElementById('copy-key-btn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Key';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    // Fallback for older browsers
+    const range = document.createRange();
+    range.selectNodeContents(keyEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    const btn = document.getElementById('copy-key-btn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Key';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function goToDashboard() {
+  window.location.href = '/app';
+}
 </script>
 </body>
 </html>

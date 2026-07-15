@@ -33,6 +33,7 @@ h2{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .btn-danger:hover{background:#991b1b}
 .btn-secondary{background:var(--border);color:var(--text)}
 .btn-secondary:hover{background:#3f3f46}
+.btn-secondary.copied{background:var(--green);color:#fff}
 .btn-sm{padding:5px 10px;font-size:11px}
 .key-list{display:flex;flex-direction:column;gap:8px}
 .key-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:13px}
@@ -283,26 +284,65 @@ async function createKey() {
 
 function showNewKey(key) {
   const modal = document.getElementById('create-key-modal');
+  // Save original modal content before replacing, so it can be restored
+  if (!modal._originalHTML) {
+    modal._originalHTML = modal.innerHTML;
+  }
   modal.innerHTML = `
-    <div class="modal">
-      <h3>API Key Created</h3>
-      <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Save this key now — it will not be shown again:</p>
-      <div class="new-key-display">
-        <code>${key}</code>
+    <div style="background:#141416;border:1px solid #27272a;border-radius:12px;padding:24px;width:100%;max-width:420px;margin:20px">
+      <h3 style="font-size:18px;font-weight:600;margin-bottom:8px;color:#e4e4e7">API Key Created</h3>
+      <p style="font-size:13px;color:#71717a;margin-bottom:12px">Save this key now — it will not be shown again:</p>
+      <div style="background:#0a0a0b;border:1px solid #22c55e;border-radius:8px;padding:14px;margin:12px 0;text-align:center">
+        <code id="new-key-code" style="font-size:13px;word-break:break-all;color:#22c55e;background:rgba(34,197,94,.1);padding:6px 10px;border-radius:4px;display:inline-block;max-width:100%">${key}</code>
       </div>
-      <div class="new-key-warning">⚠️ This is the only time you'll see this key</div>
-      <div class="modal-actions">
-        <button class="btn btn-primary" onclick="closeNewKeyModal()">I've saved it</button>
+      <p style="font-size:11px;color:#f59e0b;margin-top:8px">⚠️ This is the only time you'll see this key</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button class="btn btn-secondary" onclick="copyDisplayedKey()" id="copy-displayed-key-btn" style="padding:8px 16px;border-radius:8px;border:1px solid #27272a;background:transparent;color:#e4e4e7;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">📋 Copy Key</button>
+        <button style="padding:8px 16px;border-radius:8px;border:none;background:#6366f1;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit" onclick="closeNewKeyModal()">I've saved it</button>
       </div>
     </div>
   `;
   modal.classList.add('show');
 }
 
+function copyDisplayedKey() {
+  const codeEl = document.getElementById('new-key-code');
+  const key = codeEl?.textContent;
+  if (!key) return;
+  navigator.clipboard.writeText(key).then(() => {
+    const btn = document.getElementById('copy-displayed-key-btn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Key';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    const range = document.createRange();
+    range.selectNodeContents(codeEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    const btn = document.getElementById('copy-displayed-key-btn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Key';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
 function closeNewKeyModal() {
-  document.getElementById('create-key-modal').classList.remove('show');
-  // Restore original modal content
-  location.reload();
+  const modal = document.getElementById('create-key-modal');
+  modal.classList.remove('show');
+  // Restore original modal content (no page reload needed)
+  if (modal._originalHTML) {
+    modal.innerHTML = modal._originalHTML;
+    delete modal._originalHTML;
+  }
 }
 
 async function deleteKey(keyId) {
