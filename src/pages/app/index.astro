@@ -137,6 +137,10 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
 .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
 .legend-line{width:20px;height:2px;display:inline-block}
 .legend-dashed{width:20px;height:0;border-top:2px dashed;display:inline-block}
+#topology-container svg{will-change:transform}
+.topology-zoom-controls{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px;z-index:10}
+.topology-zoom-btn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:16px;cursor:pointer;transition:.15s;font-family:system-ui,sans-serif;padding:0;line-height:1}
+.topology-zoom-btn:hover{background:var(--border);color:var(--text)}
 </style>
 </head>
 <body>
@@ -171,74 +175,45 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
     <button class="tab-btn" data-tab="topology" onclick="switchTab('topology')">🕸️ Topology</button>
   </div>
 
-  <!-- Traces view -->
-  <div id="traces-view">
-    <!-- Project selector -->
+  <!-- Traces tab -->
+  <div id="tab-traces" class="tab-content">
     <div class="project-bar">
       <label style="font-size:12px;color:var(--text2)">Project:</label>
       <select class="project-select" id="project-select" onchange="switchProject(this.value)"></select>
     </div>
-
-    <!-- Stats -->
     <div class="stats" id="stats"></div>
-    <!-- Search -->
+    <div id="agent-filter-banner" style="display:none;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);margin-bottom:12px;font-size:13px"></div>
     <input type="text" class="search-bar" id="search" placeholder="Search by agent name or trace ID..." oninput="renderTraces()">
-    <!-- Filters -->
     <div class="filters" id="filters"></div>
-    <!-- Trace list -->
     <div class="trace-list" id="trace-list"><div class="loading">Loading traces</div></div>
   </div>
 
-  <!-- Topology view -->
-  <div id="topology-view" style="display:none">
+  <!-- Topology tab -->
+  <div id="tab-topology" class="tab-content" style="display:none">
     <div class="project-bar">
       <label style="font-size:12px;color:var(--text2)">Topology for:</label>
       <span id="topology-project-name" style="font-size:13px;font-weight:600"></span>
-      <button class="refresh-btn" id="topology-refresh-btn" onclick="loadTopology()">⟳ Refresh</button>
-      <label class="auto-refresh-toggle" style="margin-left:auto;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px">
+      <button class="refresh-btn" id="topology-refresh-btn" onclick="loadTopology()" style="font-size:12px;padding:4px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit">⟳ Refresh</button>
+      <label style="margin-left:auto;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px">
         <input type="checkbox" id="topology-auto-refresh" onchange="toggleTopologyAutoRefresh()">
         Auto-refresh (30s)
       </label>
     </div>
-    <!-- Topology stats -->
-    <div class="stats" id="topology-stats"></div>
-    <!-- Topology container -->
-    <div id="topology-container" class="topology-container">
-      <div class="topology-state" id="topology-state">
-        <div class="topology-loading">Loading topology data</div>
+    <div class="stats" id="topology-stats" style="display:none"></div>
+    <div id="topology-container" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;width:100%;height:600px">
+      <div id="topology-state" style="display:flex;align-items:center;justify-content:center;height:100%">
+        <div id="topology-message" style="text-align:center;padding:40px;color:var(--text2);font-size:14px">Loading topology data...</div>
       </div>
     </div>
   </div>
 
+  <!-- Trace detail view -->
   <div class="detail-view" id="detail-view">
     <button class="back-btn" onclick="showListView()">← Back to traces</button>
     <div id="detail-content"></div>
     <div class="timeline" id="timeline"></div>
   </div>
 </div>
-
-  <div class="detail-view" id="detail-view">
-    <button class="back-btn" onclick="showListView()">← Back to traces</button>
-    <div id="detail-content"></div>
-    <div class="timeline" id="timeline"></div>
-  </div>
-  </div><!-- /tab-traces -->
-
-  <div id="tab-topology" class="tab-content" style="display:none">
-    <div class="topology-header">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-        <label style="font-size:12px;color:var(--text2)">Project:</label>
-        <select class="project-select" id="topology-project-select" onchange="switchTopologyProject(this.value)" style="flex:1">
-          <option value="">Select a project...</option>
-        </select>
-      </div>
-    </div>
-    <div id="topology-container">
-      <div class="loading">Select a project to view topology</div>
-    </div>
-  </div>
-</div>
-
 <!-- New API Key Modal (shown after Google signup) -->
 <div class="modal-overlay" id="new-key-modal">
   <div class="modal">
@@ -273,7 +248,7 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
 <div id="loading-screen" class="loading" style="padding-top:80px">Checking authentication</div>
 
 <!-- D3.js for topology visualization -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script is:inline src="https://d3js.org/d3.v7.min.js"></script>
 
 <!-- Replay bar -->
 <div class="replay-bar" id="replay-bar">
@@ -294,6 +269,7 @@ let currentTrace = null;
 let replayIndex = -1;
 let replayInterval = null;
 let replayActive = false;
+let filterAgentName = null; // used when navigating from topology "View Traces"
 
 // Auth check
 async function checkAuth() {
@@ -333,6 +309,23 @@ async function checkAuth() {
       document.getElementById('new-key-modal').classList.add('show');
       // Clean URL without reloading
       window.history.replaceState({}, '', '/app');
+    }
+
+    // Check for agent filter from URL (navigated from topology "View Traces")
+    const agentParam = params.get('agent_name');
+    if (agentParam) {
+      filterAgentName = agentParam;
+      // Clean agent_name from URL, keep other params
+      params.delete('agent_name');
+      const newUrl = params.toString() ? `/app?${params.toString()}` : '/app';
+      window.history.replaceState({}, '', newUrl);
+      // Switch to traces tab after data loads
+      setTimeout(() => {
+        switchTab('traces');
+        renderTraces();
+        // Scroll to top and show filter indicator
+        document.querySelector('.container').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     }
   } catch (e) {
     // Redirect to login
@@ -394,6 +387,11 @@ async function logout() {
 async function switchProject(projectId) {
   currentProjectId = projectId;
   loadTraces();
+  // If topology tab is active, refresh topology data
+  if (currentTab === 'topology') {
+    document.getElementById('topology-container').querySelector('svg')?.remove();
+    loadTopology();
+  }
 }
 
 async function fetchAPI(path) {
@@ -454,8 +452,21 @@ function renderTraces() {
   let filtered = traces.filter(t => {
     if (currentFilter !== 'all' && t.status !== currentFilter) return false;
     if (currentSearch && !t.agent_name?.toLowerCase().includes(currentSearch) && !t.id.toLowerCase().includes(currentSearch)) return false;
+    if (filterAgentName && t.agent_name !== filterAgentName) return false;
     return true;
   });
+
+  // Show agent filter banner when filtering by agent from topology
+  const filterBanner = document.getElementById('agent-filter-banner');
+  if (filterAgentName) {
+    filterBanner.style.display = 'flex';
+    filterBanner.innerHTML = `
+      <span>🔍 Viewing traces for agent: <strong>${escapeHtml(filterAgentName)}</strong> (${filtered.length} trace${filtered.length !== 1 ? 's' : ''})</span>
+      <button onclick="clearAgentFilter()" style="margin-left:auto;padding:4px 10px;border:none;border-radius:4px;background:transparent;color:var(--text2);cursor:pointer;font-size:12px;font-family:inherit">✕ Clear filter</button>
+    `;
+  } else {
+    filterBanner.style.display = 'none';
+  }
 
   if (filtered.length === 0) {
     document.getElementById('trace-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:14px">No traces found</div>';
@@ -483,7 +494,7 @@ function renderTraces() {
 }
 
 async function showTrace(traceId) {
-  document.getElementById('list-view').style.display = 'none';
+  document.getElementById('tab-traces').style.display = 'none';
   document.getElementById('detail-view').classList.add('active');
   document.getElementById('detail-content').innerHTML = '<div class="loading">Loading trace</div>';
 
@@ -583,7 +594,7 @@ function escapeHtml(str) {
 }
 
 function showListView() {
-  document.getElementById('list-view').style.display = 'block';
+  document.getElementById('tab-traces').style.display = 'block';
   document.getElementById('detail-view').classList.remove('active');
   document.getElementById('replay-bar').classList.remove('active');
   stopReplay();
@@ -659,62 +670,161 @@ function switchTab(tab) {
     replayBar.style.display = tab === 'traces' ? '' : 'none';
   }
 
-  // Render topology on first switch to topology tab
+  // Load topology data on first switch to topology tab
   if (tab === 'topology') {
-    renderTopology();
+    loadTopology();
   }
 }
 
-// ─── Topology Rendering ───────────────────────────
-let topologySimulation = null;
-let topologyNodes = [];
-let topologyLinks = [];
-
-// Simulated topology data for initial development
-function getSimulatedTopologyData() {
-  return {
-    nodes: [
-      // Root agents (agents that were traced)
-      { id: 'planner', name: '🤖 Planner', type: 'root', state: 'active', children: 3 },
-      { id: 'researcher', name: '🔍 Researcher', type: 'agent', state: 'active', children: 2 },
-      { id: 'writer', name: '✍️ Writer', type: 'agent', state: 'active' },
-      { id: 'reviewer', name: '📋 Reviewer', type: 'agent', state: 'idle' },
-      // Tool agents
-      { id: 'search-tool', name: '🌐 Web Search', type: 'tool', state: 'active' },
-      { id: 'scraper-tool', name: '📄 Scraper', type: 'tool', state: 'active' },
-      { id: 'formatter', name: '🎨 Formatter', type: 'agent', state: 'active' },
-      { id: 'critic', name: '⚖️ Critic', type: 'agent', state: 'idle' },
-    ],
-    links: [
-      { source: 'planner', target: 'researcher', type: 'handoff', label: 'delegate research' },
-      { source: 'planner', target: 'writer', type: 'handoff', label: 'generate content' },
-      { source: 'planner', target: 'reviewer', type: 'handoff', label: 'review output' },
-      { source: 'researcher', target: 'search-tool', type: 'parent-child', label: 'uses' },
-      { source: 'researcher', target: 'scraper-tool', type: 'parent-child', label: 'uses' },
-      { source: 'writer', target: 'formatter', type: 'handoff', label: 'format' },
-      { source: 'reviewer', target: 'critic', type: 'parent-child', label: 'spawns' },
-      // Cross relationships
-      { source: 'writer', target: 'researcher', type: 'handoff', label: 'requests data' },
-      { source: 'reviewer', target: 'writer', type: 'handoff', label: 'request revisions' },
-    ]
-  };
+// Navigate from topology node detail to filtered traces view
+function viewAgentTraces(agentName) {
+  filterAgentName = agentName;
+  // Update URL with agent filter for shareability
+  const params = new URLSearchParams(window.location.search);
+  params.set('agent_name', agentName);
+  window.history.replaceState({}, '', `/app?${params.toString()}`);
+  // Switch to traces tab and render filtered view
+  switchTab('traces');
+  renderTraces();
+  document.querySelector('.container').scrollIntoView({ behavior: 'smooth' });
 }
 
-let topologyRendered = false;
+// Clear the agent name filter
+function clearAgentFilter() {
+  filterAgentName = null;
+  // Remove agent_name from URL
+  const params = new URLSearchParams(window.location.search);
+  params.delete('agent_name');
+  const newUrl = params.toString() ? `/app?${params.toString()}` : '/app';
+  window.history.replaceState({}, '', newUrl);
+  renderTraces();
+}
 
-function renderTopology() {
-  if (topologyRendered) return;
-  topologyRendered = true;
+// ─── Topology: Polling ─────────────────────────
+let topologyPollInterval = null;
 
+function toggleTopologyAutoRefresh() {
+  const enabled = document.getElementById('topology-auto-refresh').checked;
+  if (enabled) {
+    topologyPollInterval = setInterval(loadTopology, 30000);
+  } else {
+    if (topologyPollInterval) {
+      clearInterval(topologyPollInterval);
+      topologyPollInterval = null;
+    }
+  }
+}
+
+// ─── Topology: Data Fetching ─────────────────────
+let topologyData = null;
+
+async function loadTopology() {
+  const container = document.getElementById('topology-container');
+  const stateEl = document.getElementById('topology-state');
+  const msgEl = document.getElementById('topology-message');
+  const statsEl = document.getElementById('topology-stats');
+  const nameEl = document.getElementById('topology-project-name');
+
+  if (!currentProjectId) {
+    stateEl.style.display = 'flex';
+    msgEl.textContent = 'No project selected';
+    return;
+  }
+
+  // Show project name
+  const project = projects.find(p => p.id === currentProjectId);
+  if (nameEl && project) nameEl.textContent = project.name;
+
+  // Show loading state
+  container.querySelector('svg')?.remove();
+  const legend = container.querySelector('.topology-legend');
+  if (legend) legend.remove();
+  const infoPanel = container.querySelector('.topology-node-info');
+  if (infoPanel) infoPanel.remove();
+  stateEl.style.display = 'flex';
+  msgEl.textContent = 'Loading topology data...';
+  statsEl.style.display = 'none';
+
+  try {
+    const r = await fetch(`/api/topology/${currentProjectId}`, { credentials: 'same-origin' });
+    if (r.status === 401) {
+      window.location.href = '/app/login';
+      return;
+    }
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ error: r.statusText }));
+      throw new Error(err.error || `HTTP ${r.status}`);
+    }
+    const data = await r.json();
+
+    // Validate data
+    if (!data || !data.nodes || data.nodes.length === 0) {
+      stateEl.style.display = 'flex';
+      msgEl.textContent = 'No topology data yet. Ingest traces to see agent relationships.';
+      return;
+    }
+
+    // Store data for D3 rendering
+    topologyData = data;
+    stateEl.style.display = 'none';
+
+    // Render stats
+    if (data.stats) {
+      statsEl.style.display = 'grid';
+      statsEl.innerHTML = `
+        <div class="stat-card accent"><div class="stat-label">Agents</div><div class="stat-value">${data.stats.totalAgents}</div></div>
+        <div class="stat-card accent"><div class="stat-label">Relationships</div><div class="stat-value">${data.stats.totalEdges}</div></div>
+        <div class="stat-card"><div class="stat-label">Handoffs</div><div class="stat-value">${data.stats.handoffCount}</div></div>
+        <div class="stat-card"><div class="stat-label">Parent-Child</div><div class="stat-value">${data.stats.parentChildCount}</div></div>
+      `;
+    }
+
+    // Render D3 graph
+    renderTopologyGraph(data);
+
+  } catch (err) {
+    stateEl.style.display = 'flex';
+    msgEl.innerHTML = `<span style="color:var(--red)">⚠️ Failed to load topology: ${escapeHtml(err.message)}</span>`;
+    console.error('Topology load error:', err);
+  }
+}
+
+// ─── Topology: D3 Rendering ──────────────────────
+let topologySimulation = null;
+
+function renderTopologyGraph(data) {
   const container = document.getElementById('topology-container');
   if (!container) return;
 
-  const data = getSimulatedTopologyData();
   const width = container.clientWidth || 800;
   const height = container.clientHeight || 600;
 
-  // Clear container
-  container.innerHTML = '';
+  // Clear previous render
+  container.querySelector('svg')?.remove();
+  const existingInfo = container.querySelector('.topology-node-info');
+  if (existingInfo) existingInfo.remove();
+
+  // Build node display names with status indicators
+  const nodes = data.nodes.map(d => ({
+    ...d,
+    displayName: d.name,
+    // Color mapping based on status
+    fillColor: d.status === 'has_errors' ? '#ef4444'
+             : d.status === 'active' ? '#22c55e'
+             : d.status === 'idle' ? '#71717a'
+             : d.nodeType === 'parent' ? '#6366f1'
+             : '#22c55e',
+    strokeColor: d.status === 'has_errors' ? '#fca5a5'
+               : d.status === 'active' ? '#4ade80'
+               : d.nodeType === 'parent' ? '#818cf8'
+               : '#a1a1aa',
+    radius: d.nodeType === 'parent' ? 24
+          : d.traceCount > 10 ? 22
+          : d.traceCount > 3 ? 18
+          : 14,
+  }));
+
+  const links = data.edges.map(d => ({ ...d }));
 
   // ── Create SVG ──
   const svg = d3.select(container)
@@ -726,27 +836,21 @@ function renderTopology() {
   // ── Arrow marker defs ──
   const defs = svg.append('defs');
 
-  // Handoff arrow (purple)
   defs.append('marker')
     .attr('id', 'arrow-handoff')
     .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 28)
-    .attr('refY', 0)
-    .attr('markerWidth', 8)
-    .attr('markerHeight', 8)
+    .attr('refX', 28).attr('refY', 0)
+    .attr('markerWidth', 8).attr('markerHeight', 8)
     .attr('orient', 'auto')
     .append('path')
     .attr('d', 'M0,-4L8,0L0,4')
     .attr('fill', '#a855f7');
 
-  // Parent-child arrow (indigo)
   defs.append('marker')
     .attr('id', 'arrow-parent-child')
     .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 28)
-    .attr('refY', 0)
-    .attr('markerWidth', 8)
-    .attr('markerHeight', 8)
+    .attr('refX', 28).attr('refY', 0)
+    .attr('markerWidth', 8).attr('markerHeight', 8)
     .attr('orient', 'auto')
     .append('path')
     .attr('d', 'M0,-4L8,0L0,4')
@@ -755,12 +859,16 @@ function renderTopology() {
   // ── Zoom behavior ──
   const g = svg.append('g');
 
-  svg.call(d3.zoom()
+  const zoomBehavior = d3.zoom()
     .scaleExtent([0.1, 4])
     .on('zoom', (event) => {
       g.attr('transform', event.transform);
-    })
-  );
+    });
+
+  svg.call(zoomBehavior);
+
+  // Make zoom behavior accessible for programmatic control
+  svg.property('__zoomBehavior', zoomBehavior);
 
   // ── Links group ──
   const linkGroup = g.append('g').attr('class', 'links');
@@ -769,11 +877,8 @@ function renderTopology() {
   const nodeGroup = g.append('g').attr('class', 'nodes');
 
   // ── Force simulation ──
-  topologyNodes = data.nodes.map(d => ({ ...d }));
-  topologyLinks = data.links.map(d => ({ ...d }));
-
-  const simulation = d3.forceSimulation(topologyNodes)
-    .force('link', d3.forceLink(topologyLinks)
+  const simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links)
       .id(d => d.id)
       .distance(150)
     )
@@ -786,21 +891,19 @@ function renderTopology() {
 
   // ── Draw links ──
   const link = linkGroup.selectAll('g.link')
-    .data(topologyLinks)
+    .data(links)
     .join('g')
     .attr('class', 'link');
 
-  // Link lines
   link.append('line')
     .attr('stroke', d => d.type === 'handoff' ? '#a855f7' : '#6366f1')
-    .attr('stroke-width', 2)
+    .attr('stroke-width', d => Math.min(Math.max(d.weight || 1, 1), 4))
     .attr('stroke-dasharray', d => d.type === 'parent-child' ? '5,4' : 'none')
     .attr('marker-end', d => d.type === 'handoff' ? 'url(#arrow-handoff)' : 'url(#arrow-parent-child)')
     .attr('opacity', 0.6);
 
-  // Link labels
   link.append('text')
-    .text(d => d.label)
+    .text(d => d.label || d.type)
     .attr('font-size', 10)
     .attr('fill', '#71717a')
     .attr('text-anchor', 'middle')
@@ -809,7 +912,7 @@ function renderTopology() {
 
   // ── Draw nodes ──
   const node = nodeGroup.selectAll('g.node')
-    .data(topologyNodes)
+    .data(nodes)
     .join('g')
     .attr('class', 'node')
     .call(d3.drag()
@@ -817,6 +920,8 @@ function renderTopology() {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
+        // Visual feedback: change cursor
+        d3.select(event.sourceEvent.target).style('cursor', 'grabbing');
       })
       .on('drag', (event, d) => {
         d.fx = event.x;
@@ -824,39 +929,37 @@ function renderTopology() {
       })
       .on('end', (event, d) => {
         if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
+        // Keep position pinned so the node stays where dragged
+        d.fx = d.x;
+        d.fy = d.y;
+        // Restore cursor
+        d3.select(event.sourceEvent.target).style('cursor', 'grab');
       })
     );
 
   // Node circles
   node.append('circle')
-    .attr('r', d => d.type === 'root' ? 24 : d.type === 'tool' ? 14 : 20)
-    .attr('fill', d => {
-      if (d.type === 'root') return '#6366f1';
-      if (d.type === 'tool') return '#f59e0b';
-      return d.state === 'active' ? '#22c55e' : '#71717a';
-    })
-    .attr('stroke', d => d.type === 'root' ? '#818cf8' : d.type === 'tool' ? '#fbbf24' : (d.state === 'active' ? '#4ade80' : '#a1a1aa'))
+    .attr('r', d => d.radius)
+    .attr('fill', d => d.fillColor)
+    .attr('stroke', d => d.strokeColor)
     .attr('stroke-width', 2)
     .attr('opacity', 0.9)
     .style('cursor', 'grab');
 
   // Node labels
   node.append('text')
-    .text(d => d.name)
-    .attr('dy', d => d.type === 'root' ? 36 : 30)
+    .text(d => d.displayName)
+    .attr('dy', d => d.radius + 10)
     .attr('text-anchor', 'middle')
-    .attr('font-size', d => d.type === 'root' ? 13 : 12)
+    .attr('font-size', 12)
     .attr('fill', '#e4e4e7')
-    .attr('font-weight', d => d.type === 'root' ? 'bold' : 'normal')
     .attr('font-family', 'system-ui, sans-serif');
 
-  // Child count badge (for root/parent nodes)
-  node.filter(d => d.children)
+  // Trace count badge
+  node.filter(d => d.traceCount > 1)
     .append('text')
-    .text(d => `${d.children} traces`)
-    .attr('dy', d => d.type === 'root' ? 48 : 42)
+    .text(d => `${d.traceCount} traces`)
+    .attr('dy', d => d.radius + 22)
     .attr('text-anchor', 'middle')
     .attr('font-size', 9)
     .attr('fill', '#71717a')
@@ -877,73 +980,176 @@ function renderTopology() {
     node.attr('transform', d => `translate(${d.x},${d.y})`);
   });
 
-  // ── Click handler ──
+  // ── Click handler: show agent detail ──
+  let clickTimer = null;
   node.on('click', (event, d) => {
-    event.stopPropagation();
-    // Highlight clicked node
-    node.selectAll('circle').attr('opacity', 0.3);
-    node.selectAll('text').attr('opacity', 0.3);
-    d3.select(event.currentTarget).selectAll('circle').attr('opacity', 1);
-    d3.select(event.currentTarget).selectAll('text').attr('opacity', 1);
-    // Show info
-    const container = document.getElementById('topology-container');
-    const existingInfo = container.querySelector('.topology-node-info');
-    if (existingInfo) existingInfo.remove();
+    // Distinguish single from double click
+    if (clickTimer) {
+      clearTimeout(clickTimer);
+      clickTimer = null;
+      // Double-click: unpin node
+      topologyUnpinNode(event, d);
+      return;
+    }
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      event.stopPropagation();
+      // Highlight clicked node
+      node.selectAll('circle').attr('opacity', 0.3);
+      node.selectAll('text').attr('opacity', 0.3);
+      d3.select(event.currentTarget).selectAll('circle').attr('opacity', 1);
+      d3.select(event.currentTarget).selectAll('text').attr('opacity', 1);
 
-    const info = document.createElement('div');
-    info.className = 'topology-node-info';
-    info.style.cssText = 'position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:12px;z-index:10';
-    info.innerHTML = `
-      <div style="font-weight:600;margin-bottom:6px">${d.name}</div>
-      <div style="color:#71717a;margin-bottom:4px">Type: ${d.type}</div>
-      <div style="color:#71717a;margin-bottom:4px">State: ${d.state}</div>
-      <div style="color:#71717a">ID: <code style="color:#a1a1aa">${d.id}</code></div>
-    `;
-    container.appendChild(info);
+      // Show info panel
+      const existingInfo = container.querySelector('.topology-node-info');
+      if (existingInfo) existingInfo.remove();
+
+      const info = document.createElement('div');
+      info.className = 'topology-node-info';
+      info.style.cssText = 'position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:12px;z-index:10;min-width:200px;max-width:260px;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+      info.innerHTML = `
+        <div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text);display:flex;align-items:center;gap:6px">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${d.fillColor}"></span>
+          ${escapeHtml(d.displayName)}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:8px">
+          <div><span style="color:var(--text2)">Role:</span> ${escapeHtml(d.role || 'agent')}</div>
+          <div><span style="color:var(--text2)">Status:</span> <span style="color:${d.fillColor}">${d.status}</span></div>
+          <div><span style="color:var(--text2)">Type:</span> ${d.nodeType === 'parent' ? '👑 Parent' : '📋 Agent'}</div>
+          <div><span style="color:var(--text2)">Traces:</span> ${d.traceCount}</div>
+          <div><span style="color:var(--text2)">Completed:</span> ${d.completedCount || 0}</div>
+          <div><span style="color:var(--text2)">Failed:</span> ${d.failedCount || 0}</div>
+        </div>
+        <div style="margin-bottom:10px;color:var(--text2)">
+          <div>💰 Cost: <strong style="color:var(--text)">$${(d.totalCost || 0).toFixed(4)}</strong></div>
+          <div>⚡ Latency: <strong style="color:var(--text)">${(d.totalLatencyMs || 0) > 1000 ? ((d.totalLatencyMs || 0)/1000).toFixed(1) + 's' : (d.totalLatencyMs || 0) + 'ms'}</strong></div>
+        </div>
+        <button onclick="viewAgentTraces('${escapeHtml(d.id)}')" style="width:100%;padding:8px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px"
+          onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">
+          🔍 View Traces
+        </button>
+      `;
+      container.appendChild(info);
+    }, 250);
   });
 
   // ── Click background to deselect ──
   svg.on('click', () => {
     node.selectAll('circle').attr('opacity', 0.9);
     node.selectAll('text').attr('opacity', 1);
-    const info = document.querySelector('.topology-node-info');
+    const info = container.querySelector('.topology-node-info');
     if (info) info.remove();
   });
+
+  // ── Stop simulation after settling ──
+  // Let the force layout settle, then freeze to avoid perpetual jitter
+  setTimeout(() => {
+    simulation.alphaTarget(0).stop();
+  }, 4000);
+
+  // ── Zoom controls ──
+  const existingZoomControls = container.querySelector('.topology-zoom-controls');
+  if (existingZoomControls) existingZoomControls.remove();
+
+  const zoomControls = document.createElement('div');
+  zoomControls.className = 'topology-zoom-controls';
+  zoomControls.innerHTML = `
+    <button class="topology-zoom-btn" title="Zoom in" onclick="topologyZoomIn()">＋</button>
+    <button class="topology-zoom-btn" title="Zoom out" onclick="topologyZoomOut()">−</button>
+    <button class="topology-zoom-btn" title="Fit to view" onclick="topologyFitToScreen()">⊡</button>
+    <button class="topology-zoom-btn" title="Reset zoom" onclick="topologyResetZoom()">⌂</button>
+  `;
+  container.appendChild(zoomControls);
 
   // ── Legend ──
   const legend = document.createElement('div');
   legend.className = 'topology-legend';
+  legend.style.cssText = 'position:absolute;bottom:12px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:11px;z-index:10';
   legend.innerHTML = `
     <div style="font-weight:600;font-size:11px;color:var(--text);margin-bottom:6px">Legend</div>
-    <div><span class="legend-dot" style="background:#6366f1"></span> Root Agent</div>
-    <div><span class="legend-dot" style="background:#22c55e"></span> Active Agent</div>
-    <div><span class="legend-dot" style="background:#f59e0b"></span> Tool</div>
-    <div><span class="legend-line" style="background:#a855f7"></span> Handoff</div>
-    <div><span class="legend-dashed" style="border-color:#6366f1"></span> Parent-Child</div>
+    <div><span style="width:10px;height:10px;border-radius:50%;background:#6366f1;display:inline-block;margin-right:6px"></span> Parent Agent</div>
+    <div><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:6px"></span> Active Agent</div>
+    <div><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;margin-right:6px"></span> Has Errors</div>
+    <div><span style="width:10px;height:10px;border-radius:50%;background:#71717a;display:inline-block;margin-right:6px"></span> Idle</div>
+    <div><span style="width:20px;height:2px;background:#a855f7;display:inline-block;margin-right:6px;vertical-align:middle"></span> Handoff</div>
+    <div><span style="width:20px;height:0;border-top:2px dashed #6366f1;display:inline-block;margin-right:6px;vertical-align:middle"></span> Parent-Child</div>
   `;
   container.appendChild(legend);
 }
 
-function switchTopologyProject(projectId) {
-  // Reset so it re-renders with new data
-  topologyRendered = false;
+// ─── Topology: Zoom Controls ─────────────────────
+function topologyZoomIn() {
   const container = document.getElementById('topology-container');
-  if (container) container.innerHTML = '<div class="loading">Loading topology...</div>';
-  // Re-render (in prod, this would fetch from API)
-  renderTopology();
+  const svg = container?.querySelector('svg');
+  if (!svg) return;
+  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  if (!zoomBehavior) return;
+  d3.select(svg).transition().duration(300).call(zoomBehavior.scaleBy, 1.4);
 }
 
-// ─── Augment auth init to populate topology project selector ───
-const origRenderStats = renderStats;
-renderStats = function() {
-  if (origRenderStats) origRenderStats();
-  // Populate topology project selector
-  const topoSelect = document.getElementById('topology-project-select');
-  if (topoSelect && projects.length > 0) {
-    topoSelect.innerHTML = '<option value="">All projects</option>' +
-      projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+function topologyZoomOut() {
+  const container = document.getElementById('topology-container');
+  const svg = container?.querySelector('svg');
+  if (!svg) return;
+  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  if (!zoomBehavior) return;
+  d3.select(svg).transition().duration(300).call(zoomBehavior.scaleBy, 0.7);
+}
+
+function topologyResetZoom() {
+  const container = document.getElementById('topology-container');
+  const svg = container?.querySelector('svg');
+  if (!svg) return;
+  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  if (!zoomBehavior) return;
+  d3.select(svg).transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity);
+}
+
+function topologyFitToScreen() {
+  const container = document.getElementById('topology-container');
+  const svg = container?.querySelector('svg');
+  const graphGroup = container?.querySelector('svg g');
+  if (!svg || !graphGroup) return;
+
+  const zoomBehavior = d3.select(svg).property('__zoomBehavior');
+  if (!zoomBehavior) return;
+
+  // Get bounding box of all graph elements
+  const bounds = graphGroup.getBBox();
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  const pad = 40;
+
+  if (bounds.width === 0 || bounds.height === 0) return;
+
+  const scale = Math.min(
+    (width - pad * 2) / bounds.width,
+    (height - pad * 2) / bounds.height,
+    2 // Cap max zoom
+  );
+  const tx = (width - bounds.width * scale) / 2 - bounds.x * scale;
+  const ty = (height - bounds.height * scale) / 2 - bounds.y * scale;
+
+  d3.select(svg).transition().duration(400).call(
+    zoomBehavior.transform,
+    d3.zoomIdentity.translate(tx, ty).scale(scale)
+  );
+}
+
+// ─── Topology: Drag helpers ──────────────────────
+// Unpin a node (release from pinned position) on double-click
+function topologyUnpinNode(event, d) {
+  if (event.defaultPrevented) return;
+  d.fx = null;
+  d.fy = null;
+  // Restart simulation briefly so the node moves back into layout
+  if (topologySimulation) {
+    topologySimulation.alphaTarget(0.1).restart();
+    setTimeout(() => {
+      if (topologySimulation) topologySimulation.alphaTarget(0);
+    }, 2000);
   }
-};
+}
 
 // Expose functions to HTML onclick
 window.showTrace = showTrace;
@@ -958,7 +1164,14 @@ window.toggleUserMenu = toggleUserMenu;
 window.dismissNewKey = dismissNewKey;
 window.copyNewKey = copyNewKey;
 window.switchTab = switchTab;
-window.switchTopologyProject = switchTopologyProject;
+window.loadTopology = loadTopology;
+window.toggleTopologyAutoRefresh = toggleTopologyAutoRefresh;
+window.topologyZoomIn = topologyZoomIn;
+window.topologyZoomOut = topologyZoomOut;
+window.topologyResetZoom = topologyResetZoom;
+window.topologyFitToScreen = topologyFitToScreen;
+window.viewAgentTraces = viewAgentTraces;
+window.clearAgentFilter = clearAgentFilter;
 
 // Init
 checkAuth();

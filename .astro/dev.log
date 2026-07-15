@@ -51,3 +51,49 @@ Error: Failed to load url astro:server-app.js (resolved id: astro:server-app.js)
 15:22:53 [vite] program reload
 15:22:53 [vite] program reload
 15:22:53 [vite] program reload
+15:23:08 [vite] program reload
+15:23:16 [vite] program reload
+15:23:18 [vite] program reload
+15:23:33 [vite] program reload
+15:23:36 [vite] program reload
+15:23:36 [vite] program reload
+15:23:36 [vite] program reload
+15:23:44 [vite] program reload
+15:23:46 [ERROR] [CompilerError] Closing tag '</div>' has no matching opening tag. (The stacktrace appears to be already rewritten by something else, but was passed to vite.ssrFixStacktrace. This may cause incorrect stacktraces.)
+  Stack trace:
+    at /Volumes/Data/GitHub/agent-debugger/src/pages/app/index.astro:212:6
+    [...] See full stack trace in the browser, or rerun with --verbose.
+15:23:46 [ERROR] [CompilerError] Closing tag '</div>' has no matching opening tag. (The stacktrace appears to be already rewritten by something else, but was passed to vite.ssrFixStacktrace. This may cause incorrect stacktraces.)
+  Stack trace:
+    at /Volumes/Data/GitHub/agent-debugger/src/pages/app/index.astro:212:6
+    [...] See full stack trace in the browser, or rerun with --verbose.
+15:23:48 [watch] /src/styles/global.css
+15:23:48 [200] /app 7ms
+15:23:48 [200] /app 1ms
+15:23:48 [404] /api/auth/me 1ms
+15:23:48 [200] /app/login 2ms
+15:23:52 [watch] src/pages/app/index.astro
+15:23:52 [200] /app/login 2ms
+15:23:53 [watch] src/pages/app/index.astro
+15:23:53 [200] /app/login 2ms
+15:24:07 [200] / 7ms
+15:24:09 [200] /app 3ms
+15:24:09 [404] /api/auth/me 0ms
+15:24:09 [200] /app/login 1ms
+15:24:23 [watch] src/pages/app/index.astro
+15:24:23 [200] /app/login 2ms
+15:24:28 [vite] program reload
+15:24:28 [200] /app/login 1ms
+15:24:28 [vite] program reload
+15:24:28 [vite] program reload
+15:24:32 [watch] src/pages/app/index.astro
+15:24:32 [200] /app/login 2ms
+15:24:43 [watch] src/pages/app/index.astro
+15:24:43 [200] /app/login 1ms
+15:24:46 [watch] src/pages/app/index.astro
+15:24:46 [200] /app/login 2ms
+15:24:51 [vite] program reload
+15:24:51 [200] /app/login 1ms
+15:24:51 [vite] program reload
+15:24:51 [200] /app/login 1ms
+15:24:51 [vite] program reload
