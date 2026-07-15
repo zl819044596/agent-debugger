@@ -119,6 +119,24 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
 
 /* Mobile */
 @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* Tab bar */
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab-btn{padding:8px 18px;border:none;background:transparent;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s;font-family:inherit}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{min-height:400px}
+
+/* Topology */
+#topology-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;width:100%;height:600px}
+#topology-container svg{display:block;width:100%;height:100%}
+#topology-container .loading{padding:60px;text-align:center;color:var(--text2)}
+.topology-legend{position:absolute;bottom:12px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:11px;z-index:10}
+.topology-legend div{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.topology-legend div:last-child{margin-bottom:0}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend-line{width:20px;height:2px;display:inline-block}
+.legend-dashed{width:20px;height:0;border-top:2px dashed;display:inline-block}
 </style>
 </head>
 <body>
@@ -147,7 +165,14 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
 </header>
 
 <div class="container" id="app" style="display:none">
-  <div id="list-view">
+  <!-- Tab navigation -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="traces" onclick="switchTab('traces')">📋 Traces</button>
+    <button class="tab-btn" data-tab="topology" onclick="switchTab('topology')">🕸️ Topology</button>
+  </div>
+
+  <!-- Traces view -->
+  <div id="traces-view">
     <!-- Project selector -->
     <div class="project-bar">
       <label style="font-size:12px;color:var(--text2)">Project:</label>
@@ -164,10 +189,53 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
     <div class="trace-list" id="trace-list"><div class="loading">Loading traces</div></div>
   </div>
 
+  <!-- Topology view -->
+  <div id="topology-view" style="display:none">
+    <div class="project-bar">
+      <label style="font-size:12px;color:var(--text2)">Topology for:</label>
+      <span id="topology-project-name" style="font-size:13px;font-weight:600"></span>
+      <button class="refresh-btn" id="topology-refresh-btn" onclick="loadTopology()">⟳ Refresh</button>
+      <label class="auto-refresh-toggle" style="margin-left:auto;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px">
+        <input type="checkbox" id="topology-auto-refresh" onchange="toggleTopologyAutoRefresh()">
+        Auto-refresh (30s)
+      </label>
+    </div>
+    <!-- Topology stats -->
+    <div class="stats" id="topology-stats"></div>
+    <!-- Topology container -->
+    <div id="topology-container" class="topology-container">
+      <div class="topology-state" id="topology-state">
+        <div class="topology-loading">Loading topology data</div>
+      </div>
+    </div>
+  </div>
+
   <div class="detail-view" id="detail-view">
     <button class="back-btn" onclick="showListView()">← Back to traces</button>
     <div id="detail-content"></div>
     <div class="timeline" id="timeline"></div>
+  </div>
+</div>
+
+  <div class="detail-view" id="detail-view">
+    <button class="back-btn" onclick="showListView()">← Back to traces</button>
+    <div id="detail-content"></div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+  </div><!-- /tab-traces -->
+
+  <div id="tab-topology" class="tab-content" style="display:none">
+    <div class="topology-header">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <label style="font-size:12px;color:var(--text2)">Project:</label>
+        <select class="project-select" id="topology-project-select" onchange="switchTopologyProject(this.value)" style="flex:1">
+          <option value="">Select a project...</option>
+        </select>
+      </div>
+    </div>
+    <div id="topology-container">
+      <div class="loading">Select a project to view topology</div>
+    </div>
   </div>
 </div>
 
@@ -181,6 +249,7 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
     </div>
     <div class="new-key-warning" style="font-size:11px;color:var(--amber);margin-top:8px">⚠️ This is the only time you'll see this key</div>
     <div class="modal-actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-copy" onclick="copyNewKey()" id="copy-key-btn">📋 Copy Key</button>
       <button class="btn btn-primary" onclick="dismissNewKey()">I've saved it</button>
     </div>
   </div>
@@ -192,10 +261,19 @@ header nav a:hover,header nav a.active,header nav button:hover{color:var(--text)
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:20px}
 .modal h3{font-size:16px;margin-bottom:8px}
 .new-key-display{background:var(--bg);border:1px solid var(--green);border-radius:var(--radius);padding:14px;margin:12px 0;text-align:center}
+.btn{padding:8px 16px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-copy{background:var(--border);color:var(--text)}
+.btn-copy:hover{background:#3f3f46}
+.btn-copy.copied{background:var(--green);color:#fff}
 </style>
 
 <!-- Loading state -->
 <div id="loading-screen" class="loading" style="padding-top:80px">Checking authentication</div>
+
+<!-- D3.js for topology visualization -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
 
 <!-- Replay bar -->
 <div class="replay-bar" id="replay-bar">
@@ -268,6 +346,37 @@ function toggleUserMenu() {
 
 function dismissNewKey() {
   document.getElementById('new-key-modal').classList.remove('show');
+}
+
+function copyNewKey() {
+  const keyEl = document.getElementById('new-key-value');
+  const key = keyEl.textContent;
+  if (!key) return;
+  navigator.clipboard.writeText(key).then(() => {
+    const btn = document.getElementById('copy-key-btn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Key';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    // Fallback: select and execCommand
+    const range = document.createRange();
+    range.selectNodeContents(keyEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    const btn = document.getElementById('copy-key-btn');
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy Key';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
 }
 
 // Close dropdown on click outside
@@ -527,6 +636,315 @@ function updateReplayUI() {
   document.getElementById('replay-progress-bar').style.width = total > 0 ? `${((current + 1) / total) * 100}%` : '0%';
 }
 
+// ─── Tab Switching ────────────────────────────────
+let currentTab = 'traces';
+
+function switchTab(tab) {
+  if (tab === currentTab) return;
+  currentTab = tab;
+
+  // Update active tab button
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+
+  // Show/hide tab content
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.style.display = c.id === `tab-${tab}` ? 'block' : 'none';
+  });
+
+  // Hide replay bar when not on traces tab
+  const replayBar = document.getElementById('replay-bar');
+  if (replayBar) {
+    replayBar.style.display = tab === 'traces' ? '' : 'none';
+  }
+
+  // Render topology on first switch to topology tab
+  if (tab === 'topology') {
+    renderTopology();
+  }
+}
+
+// ─── Topology Rendering ───────────────────────────
+let topologySimulation = null;
+let topologyNodes = [];
+let topologyLinks = [];
+
+// Simulated topology data for initial development
+function getSimulatedTopologyData() {
+  return {
+    nodes: [
+      // Root agents (agents that were traced)
+      { id: 'planner', name: '🤖 Planner', type: 'root', state: 'active', children: 3 },
+      { id: 'researcher', name: '🔍 Researcher', type: 'agent', state: 'active', children: 2 },
+      { id: 'writer', name: '✍️ Writer', type: 'agent', state: 'active' },
+      { id: 'reviewer', name: '📋 Reviewer', type: 'agent', state: 'idle' },
+      // Tool agents
+      { id: 'search-tool', name: '🌐 Web Search', type: 'tool', state: 'active' },
+      { id: 'scraper-tool', name: '📄 Scraper', type: 'tool', state: 'active' },
+      { id: 'formatter', name: '🎨 Formatter', type: 'agent', state: 'active' },
+      { id: 'critic', name: '⚖️ Critic', type: 'agent', state: 'idle' },
+    ],
+    links: [
+      { source: 'planner', target: 'researcher', type: 'handoff', label: 'delegate research' },
+      { source: 'planner', target: 'writer', type: 'handoff', label: 'generate content' },
+      { source: 'planner', target: 'reviewer', type: 'handoff', label: 'review output' },
+      { source: 'researcher', target: 'search-tool', type: 'parent-child', label: 'uses' },
+      { source: 'researcher', target: 'scraper-tool', type: 'parent-child', label: 'uses' },
+      { source: 'writer', target: 'formatter', type: 'handoff', label: 'format' },
+      { source: 'reviewer', target: 'critic', type: 'parent-child', label: 'spawns' },
+      // Cross relationships
+      { source: 'writer', target: 'researcher', type: 'handoff', label: 'requests data' },
+      { source: 'reviewer', target: 'writer', type: 'handoff', label: 'request revisions' },
+    ]
+  };
+}
+
+let topologyRendered = false;
+
+function renderTopology() {
+  if (topologyRendered) return;
+  topologyRendered = true;
+
+  const container = document.getElementById('topology-container');
+  if (!container) return;
+
+  const data = getSimulatedTopologyData();
+  const width = container.clientWidth || 800;
+  const height = container.clientHeight || 600;
+
+  // Clear container
+  container.innerHTML = '';
+
+  // ── Create SVG ──
+  const svg = d3.select(container)
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .style('background', 'var(--bg)');
+
+  // ── Arrow marker defs ──
+  const defs = svg.append('defs');
+
+  // Handoff arrow (purple)
+  defs.append('marker')
+    .attr('id', 'arrow-handoff')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 28)
+    .attr('refY', 0)
+    .attr('markerWidth', 8)
+    .attr('markerHeight', 8)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L8,0L0,4')
+    .attr('fill', '#a855f7');
+
+  // Parent-child arrow (indigo)
+  defs.append('marker')
+    .attr('id', 'arrow-parent-child')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 28)
+    .attr('refY', 0)
+    .attr('markerWidth', 8)
+    .attr('markerHeight', 8)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L8,0L0,4')
+    .attr('fill', '#6366f1');
+
+  // ── Zoom behavior ──
+  const g = svg.append('g');
+
+  svg.call(d3.zoom()
+    .scaleExtent([0.1, 4])
+    .on('zoom', (event) => {
+      g.attr('transform', event.transform);
+    })
+  );
+
+  // ── Links group ──
+  const linkGroup = g.append('g').attr('class', 'links');
+
+  // ── Nodes group ──
+  const nodeGroup = g.append('g').attr('class', 'nodes');
+
+  // ── Force simulation ──
+  topologyNodes = data.nodes.map(d => ({ ...d }));
+  topologyLinks = data.links.map(d => ({ ...d }));
+
+  const simulation = d3.forceSimulation(topologyNodes)
+    .force('link', d3.forceLink(topologyLinks)
+      .id(d => d.id)
+      .distance(150)
+    )
+    .force('charge', d3.forceManyBody().strength(-400))
+    .force('center', d3.forceCenter(width / 2, height / 2))
+    .force('collide', d3.forceCollide(50))
+    .alphaDecay(0.02);
+
+  topologySimulation = simulation;
+
+  // ── Draw links ──
+  const link = linkGroup.selectAll('g.link')
+    .data(topologyLinks)
+    .join('g')
+    .attr('class', 'link');
+
+  // Link lines
+  link.append('line')
+    .attr('stroke', d => d.type === 'handoff' ? '#a855f7' : '#6366f1')
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', d => d.type === 'parent-child' ? '5,4' : 'none')
+    .attr('marker-end', d => d.type === 'handoff' ? 'url(#arrow-handoff)' : 'url(#arrow-parent-child)')
+    .attr('opacity', 0.6);
+
+  // Link labels
+  link.append('text')
+    .text(d => d.label)
+    .attr('font-size', 10)
+    .attr('fill', '#71717a')
+    .attr('text-anchor', 'middle')
+    .attr('dy', -6)
+    .attr('font-family', 'system-ui, sans-serif');
+
+  // ── Draw nodes ──
+  const node = nodeGroup.selectAll('g.node')
+    .data(topologyNodes)
+    .join('g')
+    .attr('class', 'node')
+    .call(d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on('drag', (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on('end', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      })
+    );
+
+  // Node circles
+  node.append('circle')
+    .attr('r', d => d.type === 'root' ? 24 : d.type === 'tool' ? 14 : 20)
+    .attr('fill', d => {
+      if (d.type === 'root') return '#6366f1';
+      if (d.type === 'tool') return '#f59e0b';
+      return d.state === 'active' ? '#22c55e' : '#71717a';
+    })
+    .attr('stroke', d => d.type === 'root' ? '#818cf8' : d.type === 'tool' ? '#fbbf24' : (d.state === 'active' ? '#4ade80' : '#a1a1aa'))
+    .attr('stroke-width', 2)
+    .attr('opacity', 0.9)
+    .style('cursor', 'grab');
+
+  // Node labels
+  node.append('text')
+    .text(d => d.name)
+    .attr('dy', d => d.type === 'root' ? 36 : 30)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', d => d.type === 'root' ? 13 : 12)
+    .attr('fill', '#e4e4e7')
+    .attr('font-weight', d => d.type === 'root' ? 'bold' : 'normal')
+    .attr('font-family', 'system-ui, sans-serif');
+
+  // Child count badge (for root/parent nodes)
+  node.filter(d => d.children)
+    .append('text')
+    .text(d => `${d.children} traces`)
+    .attr('dy', d => d.type === 'root' ? 48 : 42)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', 9)
+    .attr('fill', '#71717a')
+    .attr('font-family', 'system-ui, sans-serif');
+
+  // ── Tick handler ──
+  simulation.on('tick', () => {
+    link.selectAll('line')
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+
+    link.selectAll('text')
+      .attr('x', d => (d.source.x + d.target.x) / 2)
+      .attr('y', d => (d.source.y + d.target.y) / 2);
+
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  // ── Click handler ──
+  node.on('click', (event, d) => {
+    event.stopPropagation();
+    // Highlight clicked node
+    node.selectAll('circle').attr('opacity', 0.3);
+    node.selectAll('text').attr('opacity', 0.3);
+    d3.select(event.currentTarget).selectAll('circle').attr('opacity', 1);
+    d3.select(event.currentTarget).selectAll('text').attr('opacity', 1);
+    // Show info
+    const container = document.getElementById('topology-container');
+    const existingInfo = container.querySelector('.topology-node-info');
+    if (existingInfo) existingInfo.remove();
+
+    const info = document.createElement('div');
+    info.className = 'topology-node-info';
+    info.style.cssText = 'position:absolute;top:12px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font-size:12px;z-index:10';
+    info.innerHTML = `
+      <div style="font-weight:600;margin-bottom:6px">${d.name}</div>
+      <div style="color:#71717a;margin-bottom:4px">Type: ${d.type}</div>
+      <div style="color:#71717a;margin-bottom:4px">State: ${d.state}</div>
+      <div style="color:#71717a">ID: <code style="color:#a1a1aa">${d.id}</code></div>
+    `;
+    container.appendChild(info);
+  });
+
+  // ── Click background to deselect ──
+  svg.on('click', () => {
+    node.selectAll('circle').attr('opacity', 0.9);
+    node.selectAll('text').attr('opacity', 1);
+    const info = document.querySelector('.topology-node-info');
+    if (info) info.remove();
+  });
+
+  // ── Legend ──
+  const legend = document.createElement('div');
+  legend.className = 'topology-legend';
+  legend.innerHTML = `
+    <div style="font-weight:600;font-size:11px;color:var(--text);margin-bottom:6px">Legend</div>
+    <div><span class="legend-dot" style="background:#6366f1"></span> Root Agent</div>
+    <div><span class="legend-dot" style="background:#22c55e"></span> Active Agent</div>
+    <div><span class="legend-dot" style="background:#f59e0b"></span> Tool</div>
+    <div><span class="legend-line" style="background:#a855f7"></span> Handoff</div>
+    <div><span class="legend-dashed" style="border-color:#6366f1"></span> Parent-Child</div>
+  `;
+  container.appendChild(legend);
+}
+
+function switchTopologyProject(projectId) {
+  // Reset so it re-renders with new data
+  topologyRendered = false;
+  const container = document.getElementById('topology-container');
+  if (container) container.innerHTML = '<div class="loading">Loading topology...</div>';
+  // Re-render (in prod, this would fetch from API)
+  renderTopology();
+}
+
+// ─── Augment auth init to populate topology project selector ───
+const origRenderStats = renderStats;
+renderStats = function() {
+  if (origRenderStats) origRenderStats();
+  // Populate topology project selector
+  const topoSelect = document.getElementById('topology-project-select');
+  if (topoSelect && projects.length > 0) {
+    topoSelect.innerHTML = '<option value="">All projects</option>' +
+      projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+};
+
 // Expose functions to HTML onclick
 window.showTrace = showTrace;
 window.toggleStep = toggleStep;
@@ -538,6 +956,9 @@ window.switchProject = switchProject;
 window.logout = logout;
 window.toggleUserMenu = toggleUserMenu;
 window.dismissNewKey = dismissNewKey;
+window.copyNewKey = copyNewKey;
+window.switchTab = switchTab;
+window.switchTopologyProject = switchTopologyProject;
 
 // Init
 checkAuth();

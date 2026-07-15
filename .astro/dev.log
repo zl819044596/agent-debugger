@@ -1,0 +1,53 @@
+15:20:53 [vite] connected.
+15:20:54 [types] Generated 0ms
+15:20:54 [vite] connected.
+15:20:54 [content] Syncing content
+15:20:54 [content] Synced content
+15:20:54 [vite] Re-optimizing dependencies because vite config has changed
+ astro  v7.0.7 ready in 707 ms
+┃ Local    http://localhost:4321/
+┃ Network  use --host to expose
+15:20:54 watching for file changes...
+15:20:59 [200] /app 10ms
+15:20:59 [404] /api/auth/me 12ms
+15:20:59 [200] /app 1ms
+15:20:59 [404] /api/auth/me 0ms
+15:20:59 [200] /app/login 82ms
+15:20:59 [200] /app/login 2ms
+15:21:02 [200] / 5ms
+15:21:05 [200] /app/login 1ms
+15:21:31 Configuration file updated. Restarting...
+15:21:31 [vite] program reload
+15:21:31 [ERROR] [vite] An error happened during full reload
+Failed to load url astro:server-app.js (resolved id: astro:server-app.js). Does the file exist?
+Error: Failed to load url astro:server-app.js (resolved id: astro:server-app.js). Does the file exist?
+    at loadAndTransform (file:///Volumes/Data/GitHub/agent-debugger/node_modules/vite/dist/node/chunks/node.js:20087:31)
+15:21:31 [200] /app/login 5ms
+15:21:31 [vite] connected.
+15:21:31 [vite] connected.
+15:21:31 [vite] Re-optimizing dependencies because lockfile has changed
+15:21:31 [vite] server restarted.
+15:21:32 [200] /features 9ms
+15:21:32 [200] /features 1ms
+15:21:34 [200] /pricing 4ms
+15:21:39 [vite] program reload
+15:21:39 [ERROR] [vite] An error happened during full reload
+Failed to load url astro:server-app.js (resolved id: astro:server-app.js). Does the file exist?
+Error: Failed to load url astro:server-app.js (resolved id: astro:server-app.js). Does the file exist?
+    at loadAndTransform (file:///Volumes/Data/GitHub/agent-debugger/node_modules/vite/dist/node/chunks/node.js:20087:31)
+15:21:39 [200] /pricing 5ms
+15:21:49 [vite] program reload
+15:21:49 [200] /pricing 3ms
+15:21:54 [vite] program reload
+15:21:54 [200] /pricing 3ms
+15:22:05 [404] /robots.txt 2ms
+15:22:07 [404] /sitemap-index.xml 0ms
+15:22:09 [404] /privacy 0ms
+15:22:11 [404] /terms 0ms
+15:22:36 [vite] program reload
+15:22:38 [vite] program reload
+15:22:47 [vite] program reload
+15:22:50 [vite] program reload
+15:22:53 [vite] program reload
+15:22:53 [vite] program reload
+15:22:53 [vite] program reload
