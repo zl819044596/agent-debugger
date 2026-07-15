@@ -1,0 +1,112 @@
+---
+const title = 'Register | Agent Debugger';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0b;--surface:#141416;--border:#27272a;--text:#e4e4e7;--text2:#71717a;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--radius:8px}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;width:100%;max-width:400px;margin:20px}
+.auth-box h1{font-size:20px;margin-bottom:4px;text-align:center}
+.auth-box p{color:var(--text2);font-size:13px;text-align:center;margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.form-group input{width:100%;padding:10px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
+.form-group input:focus{outline:none;border-color:var(--accent)}
+.btn{width:100%;padding:10px;border-radius:var(--radius);border:none;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.error-msg{color:var(--red);font-size:12px;text-align:center;margin-top:12px;display:none}
+.footer-text{text-align:center;font-size:12px;color:var(--text2);margin-top:16px}
+.footer-text a{color:var(--accent);text-decoration:none}
+.footer-text a:hover{color:var(--accent2)}
+.logo{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.logo-text{font-size:16px;font-weight:700}
+.logo-text span{color:var(--accent)}
+.input-hint{font-size:11px;color:var(--text2);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="auth-box">
+  <div class="logo">
+    <span class="logo-dot"></span>
+    <span class="logo-text">Agent <span>Debugger</span></span>
+  </div>
+  <h1>Create account</h1>
+  <p>Start debugging your AI agents for free</p>
+
+  <form id="register-form" onsubmit="return false;">
+    <div class="form-group">
+      <label for="name">Name (optional)</label>
+      <input type="text" id="name" placeholder="Your name" autocomplete="name">
+    </div>
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@example.com" required autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="At least 6 characters" required autocomplete="new-password">
+      <div class="input-hint">Min 6 characters</div>
+    </div>
+    <button type="submit" class="btn btn-primary" id="submit-btn">Create Account</button>
+    <div class="error-msg" id="error-msg"></div>
+  </form>
+
+  <div class="footer-text">
+    Already have an account? <a href="/app/login">Sign in</a>
+  </div>
+</div>
+
+<script is:inline>
+document.getElementById('register-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const err = document.getElementById('error-msg');
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+  err.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+      }),
+      credentials: 'same-origin',
+    });
+
+    const data = await r.json();
+    if (!r.ok) {
+      err.textContent = data.error || 'Registration failed';
+      err.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+
+    // Show API key once
+    alert(`Account created!\n\nYour API key (save it now — won't be shown again):\n${data.api_key}`);
+    window.location.href = '/app';
+  } catch (e) {
+    err.textContent = 'Network error. Please try again.';
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  }
+});
+</script>
+</body>
+</html>

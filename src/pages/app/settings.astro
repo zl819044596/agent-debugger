@@ -1,0 +1,368 @@
+---
+const title = 'Settings | Agent Debugger';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0b;--surface:#141416;--border:#27272a;--text:#e4e4e7;--text2:#71717a;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--radius:8px}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:16px;font-weight:600}
+header h1 span{color:var(--accent)}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+header nav{display:flex;gap:12px}
+header nav a{color:var(--text2);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:var(--radius);transition:.15s}
+header nav a:hover,header nav a.active{color:var(--text);background:var(--border)}
+.container{max-width:900px;margin:0 auto;padding:24px}
+h2{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px}
+.section h3{font-size:15px;margin-bottom:4px}
+.section p{font-size:12px;color:var(--text2);margin-bottom:16px}
+.btn{padding:8px 16px;border-radius:var(--radius);border:none;font-weight:600;font-size:12px;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-danger{background:#7f1d1d;color:#fca5a5}
+.btn-danger:hover{background:#991b1b}
+.btn-secondary{background:var(--border);color:var(--text)}
+.btn-secondary:hover{background:#3f3f46}
+.btn-sm{padding:5px 10px;font-size:11px}
+.key-list{display:flex;flex-direction:column;gap:8px}
+.key-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:13px}
+.key-info{display:flex;flex-direction:column;gap:2px}
+.key-name{font-weight:600;font-size:13px}
+.key-preview{font-family:monospace;font-size:12px;color:var(--text2)}
+.key-meta{font-size:11px;color:var(--text2)}
+.key-actions{display:flex;gap:6px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);align-items:center;justify-content:center;z-index:100}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:20px}
+.modal h3{font-size:16px;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.new-key-display{background:var(--bg);border:1px solid var(--green);border-radius:var(--radius);padding:14px;margin:12px 0;text-align:center}
+.new-key-display code{font-size:13px;word-break:break-all;color:var(--green);background:rgba(34,197,94,.1);padding:6px 10px;border-radius:4px;display:inline-block;max-width:100%}
+.new-key-warning{font-size:11px;color:var(--amber);margin-top:8px}
+.empty-state{text-align:center;padding:24px;color:var(--text2);font-size:13px}
+.empty-state .emoji{font-size:32px;margin-bottom:8px;display:block}
+.link{color:var(--accent);text-decoration:none;font-size:13px}
+.link:hover{color:var(--accent2)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;font-size:13px;z-index:200;display:none;animation:fadeIn .2s}
+.toast.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.error{border-color:var(--red);color:var(--red)}
+
+/* Project list */
+.project-list{display:flex;flex-direction:column;gap:8px}
+.project-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:13px}
+.project-name{font-weight:600}
+.project-meta{font-size:11px;color:var(--text2)}
+
+/* User info */
+.user-info{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.user-field{font-size:13px}
+.user-field .label{color:var(--text2);font-size:11px;margin-bottom:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    <h1>Agent <span>Debugger</span></h1>
+  </div>
+  <nav>
+    <a href="/app">Dashboard</a>
+    <a href="/">Website</a>
+    <a href="/app/settings" class="active">Settings</a>
+  </nav>
+</header>
+
+<div class="container" id="app">
+  <div id="loading" class="loading" style="text-align:center;padding:40px;color:var(--text2)">Loading settings...</div>
+
+  <!-- User info -->
+  <div class="section" id="user-section" style="display:none">
+    <h3>Account</h3>
+    <p>Your account details and plan</p>
+    <div class="user-info" id="user-info"></div>
+  </div>
+
+  <!-- Projects -->
+  <div class="section" id="projects-section" style="display:none">
+    <h3>Projects</h3>
+    <p>Projects organize your traces and API keys</p>
+    <div class="project-list" id="project-list"><div class="loading">Loading...</div></div>
+    <button class="btn btn-secondary" style="margin-top:12px" onclick="showCreateProject()">+ New Project</button>
+  </div>
+
+  <!-- API Keys -->
+  <div class="section" id="keys-section" style="display:none">
+    <h3>API Keys</h3>
+    <p>Use these keys to send traces from your AI agents</p>
+    <div class="key-list" id="key-list"><div class="loading">Loading...</div></div>
+    <button class="btn btn-primary" style="margin-top:12px" onclick="showCreateKey()">+ New API Key</button>
+  </div>
+
+  <!-- SDK Setup -->
+  <div class="section">
+    <h3>Quick Start</h3>
+    <p>Send traces using your API key</p>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <pre id="code-sample" style="font-size:12px;color:#a1a1aa;overflow-x:auto;line-height:1.6"></pre>
+    </div>
+    <script is:inline>document.getElementById('code-sample').textContent = `# Using curl
+curl -X POST https://debug.getfitai.io/api/ingest \\
+  -H "Authorization: Bearer *** \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "trace_id": "example-trace-1",
+    "agent_name": "my-agent",
+    "type": "trace_start"
+  }'
+
+# Or try our Python SDK:
+pip install agent-debugger-sdk`;</script>
+  </div>
+</div>
+
+<!-- Create Key Modal -->
+<div class="modal-overlay" id="create-key-modal">
+  <div class="modal">
+    <h3>Create API Key</h3>
+    <div class="form-group">
+      <label>Key Name</label>
+      <input type="text" id="new-key-name" placeholder="e.g. production, dev">
+    </div>
+    <div class="form-group">
+      <label>Project</label>
+      <select id="new-key-project"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('create-key-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createKey()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Project Modal -->
+<div class="modal-overlay" id="create-project-modal">
+  <div class="modal">
+    <h3>Create Project</h3>
+    <div class="form-group">
+      <label>Project Name</label>
+      <input type="text" id="new-project-name" placeholder="e.g. my-app">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('create-project-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createProject()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script is:inline>
+let projects = [];
+
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('Not authenticated');
+    const data = await r.json();
+    projects = data.projects || [];
+
+    document.getElementById('loading').style.display = 'none';
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'block');
+
+    renderUser(data.user);
+    renderProjects();
+    renderKeys();
+  } catch (e) {
+    window.location.href = '/app/login';
+  }
+}
+
+function renderUser(user) {
+  document.getElementById('user-info').innerHTML = `
+    <div class="user-field"><div class="label">Email</div>${user.email}</div>
+    <div class="user-field"><div class="label">Plan</div><span style="color:var(--accent);font-weight:600">${user.plan}</span></div>
+    ${user.name ? `<div class="user-field"><div class="label">Name</div>${user.name}</div>` : ''}
+    <div class="user-field"><div class="label">User ID</div><code style="font-size:11px;color:var(--text2)">${user.id}</code></div>
+  `;
+}
+
+function renderProjects() {
+  const list = document.getElementById('project-list');
+  if (!projects.length) {
+    list.innerHTML = '<div class="empty-state"><span class="emoji">📁</span>No projects yet</div>';
+    return;
+  }
+  list.innerHTML = projects.map(p => `
+    <div class="project-item">
+      <div>
+        <div class="project-name">${p.name}</div>
+        <div class="project-meta">${p.trace_count || 0} traces · ${new Date(p.created_at + 'Z').toLocaleDateString()}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);font-family:monospace">${p.id}</div>
+    </div>
+  `).join('');
+}
+
+async function renderKeys() {
+  const list = document.getElementById('key-list');
+  try {
+    const r = await fetch('/api/auth/keys', { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('Failed');
+    const data = await r.json();
+    const keys = data.keys || [];
+
+    if (!keys.length) {
+      list.innerHTML = '<div class="empty-state"><span class="emoji">🔑</span>No API keys yet</div>';
+      return;
+    }
+
+    list.innerHTML = keys.map(k => `
+      <div class="key-item">
+        <div class="key-info">
+          <div class="key-name">${k.name}</div>
+          <div class="key-preview">${k.key_preview}</div>
+          <div class="key-meta">${k.project_name || k.project_id} · Created ${new Date(k.created_at + 'Z').toLocaleDateString()}${k.last_used_at ? ' · Last used ' + new Date(k.last_used_at + 'Z').toLocaleDateString() : ''}</div>
+        </div>
+        <div class="key-actions">
+          <button class="btn btn-sm btn-danger" onclick="deleteKey('${k.id}')">Delete</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty-state" style="color:var(--red)">Failed to load API keys</div>';
+  }
+}
+
+function showCreateKey() {
+  const select = document.getElementById('new-key-project');
+  select.innerHTML = projects.map(p =>
+    `<option value="${p.id}">${p.name}</option>`
+  ).join('');
+  document.getElementById('new-key-name').value = '';
+  document.getElementById('create-key-modal').classList.add('show');
+}
+
+async function createKey() {
+  const name = document.getElementById('new-key-name').value || 'default';
+  const projectId = document.getElementById('new-key-project').value;
+
+  try {
+    const r = await fetch('/api/auth/keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, project_id: projectId }),
+      credentials: 'same-origin',
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+
+    closeModal('create-key-modal');
+    showNewKey(data.key.id);
+    renderKeys();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function showNewKey(key) {
+  const modal = document.getElementById('create-key-modal');
+  modal.innerHTML = `
+    <div class="modal">
+      <h3>API Key Created</h3>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Save this key now — it will not be shown again:</p>
+      <div class="new-key-display">
+        <code>${key}</code>
+      </div>
+      <div class="new-key-warning">⚠️ This is the only time you'll see this key</div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" onclick="closeNewKeyModal()">I've saved it</button>
+      </div>
+    </div>
+  `;
+}
+
+function closeNewKeyModal() {
+  document.getElementById('create-key-modal').classList.remove('show');
+  // Restore original modal content
+  location.reload();
+}
+
+async function deleteKey(keyId) {
+  if (!confirm('Delete this API key? This cannot be undone.')) return;
+  try {
+    const r = await fetch(`/api/auth/keys?id=${keyId}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    });
+    if (!r.ok) throw new Error('Failed to delete');
+    showToast('API key deleted', 'success');
+    renderKeys();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function showCreateProject() {
+  document.getElementById('new-project-name').value = '';
+  document.getElementById('create-project-modal').classList.add('show');
+}
+
+async function createProject() {
+  const name = document.getElementById('new-project-name').value;
+  if (!name) { showToast('Project name required', 'error'); return; }
+
+  try {
+    const r = await fetch('/api/auth/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+      credentials: 'same-origin',
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+
+    closeModal('create-project-modal');
+    showToast('Project created', 'success');
+    // Reload projects
+    const authR = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    const authData = await authR.json();
+    projects = authData.projects || [];
+    renderProjects();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// Init
+checkAuth();
+</script>
+</body>
+</html>

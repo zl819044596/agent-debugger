@@ -1,0 +1,508 @@
+---
+// Dashboard App — Trace viewer with auth
+const title = 'Dashboard | Agent Debugger';
+const apiBase = '';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{title}</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0b;--surface:#141416;--border:#27272a;--text:#e4e4e7;--text2:#71717a;--accent:#6366f1;--accent2:#818cf8;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--radius:8px}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:16px;font-weight:600}
+header h1 span{color:var(--accent)}
+.logo{display:flex;align-items:center;gap:8px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+header nav{display:flex;gap:8px;align-items:center}
+header nav a,header nav button{color:var(--text2);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:var(--radius);transition:.15s;background:none;border:none;cursor:pointer;font-family:inherit}
+header nav a:hover,header nav a.active,header nav button:hover{color:var(--text);background:var(--border)}
+.user-menu{position:relative}
+.user-menu-btn{display:flex;align-items:center;gap:6px;color:var(--text2);font-size:13px;padding:6px 10px;border-radius:var(--radius);cursor:pointer;background:none;border:none;font-family:inherit}
+.user-menu-btn:hover{color:var(--text);background:var(--border)}
+.user-menu-dropdown{display:none;position:absolute;top:100%;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;min-width:160px;z-index:50;margin-top:4px}
+.user-menu-dropdown.show{display:block}
+.user-menu-dropdown a,.user-menu-dropdown button{display:block;width:100%;text-align:left;padding:8px 12px;font-size:13px;color:var(--text2);text-decoration:none;background:none;border:none;cursor:pointer;border-radius:4px;font-family:inherit}
+.user-menu-dropdown a:hover,.user-menu-dropdown button:hover{background:var(--border);color:var(--text)}
+.user-menu-dropdown .divider{height:1px;background:var(--border);margin:4px 0}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-label{font-size:12px;color:var(--text2);margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:700}
+.stat-card.green .stat-value{color:var(--green)}
+.stat-card.red .stat-value{color:var(--red)}
+.stat-card.amber .stat-value{color:var(--amber)}
+.stat-card.accent .stat-value{color:var(--accent)}
+
+/* Project selector */
+.project-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.project-select{padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer}
+.project-select:focus{outline:none;border-color:var(--accent)}
+
+/* Trace list */
+.trace-list{display:flex;flex-direction:column;gap:8px}
+.trace-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:.15s}
+.trace-card:hover{border-color:var(--accent)}
+.trace-header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.status-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+.status-badge.completed{background:#166534;color:#86efac}
+.status-badge.failed,.status-badge.error{background:#7f1d1d;color:#fca5a5}
+.status-badge.in_progress{background:#1e3a5f;color:#93c5fd}
+.trace-name{font-weight:600;font-size:14px}
+.trace-meta{display:flex;gap:16px;font-size:12px;color:var(--text2);flex-wrap:wrap}
+.trace-meta span{display:flex;align-items:center;gap:4px}
+
+/* Detail view */
+.detail-view{display:none}
+.detail-view.active{display:block}
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--accent);cursor:pointer;font-size:13px;background:none;border:none;padding:6px 0;margin-bottom:16px}
+.back-btn:hover{color:var(--accent2)}
+.detail-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.detail-header h2{font-size:18px;margin-bottom:8px}
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px}
+.detail-item{font-size:12px}
+.detail-item .label{color:var(--text2)}
+.detail-item .value{color:var(--text);font-weight:500}
+
+/* Timeline */
+.timeline{position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:13px;top:8px;bottom:8px;width:2px;background:var(--border)}
+.step{position:relative;margin-bottom:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;cursor:pointer;transition:.15s}
+.step:hover{border-color:var(--accent)}
+.step-dot{position:absolute;left:-24px;top:16px;width:12px;height:12px;border-radius:50%;border:2px solid var(--border);background:var(--bg)}
+.step.think .step-dot{background:#6366f1;border-color:#6366f1}
+.step.tool_call .step-dot{background:#22c55e;border-color:#22c55e}
+.step.tool_result .step-dot{background:#f59e0b;border-color:#f59e0b}
+.step.error .step-dot{background:#ef4444;border-color:#ef4444}
+.step.handoff .step-dot{background:#a855f7;border-color:#a855f7}
+.step-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:13px}
+.step-icon{font-size:14px}
+.step-type{font-weight:600;text-transform:capitalize;font-size:12px}
+.step-meta{margin-left:auto;display:flex;gap:12px;font-size:11px;color:var(--text2)}
+.step-title{font-size:13px;color:var(--text2);margin-bottom:4px}
+.step-detail{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px}
+.step-detail.open{display:block}
+.step-detail pre{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;overflow-x:auto;font-size:11px;color:#a1a1aa;margin-top:4px;max-height:200px;overflow-y:auto}
+
+/* Replay */
+.replay-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 24px;display:none;align-items:center;gap:12px;z-index:100}
+.replay-bar.active{display:flex}
+.replay-btn{background:var(--accent);color:#fff;border:none;padding:6px 16px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:600}
+.replay-btn:hover{background:var(--accent2)}
+.replay-progress{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.replay-progress-bar{height:100%;background:var(--accent);transition:width .3s;width:0}
+
+/* Filters */
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;cursor:pointer;transition:.15s;font-family:inherit}
+.filter-btn:hover{border-color:var(--text2);color:var(--text)}
+.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Search */
+.search-bar{width:100%;padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;margin-bottom:16px;font-family:inherit}
+.search-bar:focus{outline:none;border-color:var(--accent)}
+.search-bar::placeholder{color:var(--text2)}
+
+/* Loading */
+.loading{text-align:center;padding:40px;color:var(--text2);font-size:14px}
+.loading::after{content:'...';animation:dots 1.5s steps(4,end) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+
+/* Mobile */
+@media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-dot"></span>
+    <h1>Agent <span>Debugger</span></h1>
+  </div>
+  <nav>
+    <a href="/" class="active">Dashboard</a>
+    <a href="/">Website</a>
+    <div class="user-menu" id="user-menu">
+      <button class="user-menu-btn" onclick="toggleUserMenu()">
+        <span id="user-email">Account</span>
+        <span style="font-size:10px">▾</span>
+      </button>
+      <div class="user-menu-dropdown" id="user-dropdown">
+        <a href="/app/settings">⚙️ API Keys</a>
+        <a href="/app/settings">📁 Projects</a>
+        <div class="divider"></div>
+        <button onclick="logout()">🚪 Sign Out</button>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<div class="container" id="app" style="display:none">
+  <div id="list-view">
+    <!-- Project selector -->
+    <div class="project-bar">
+      <label style="font-size:12px;color:var(--text2)">Project:</label>
+      <select class="project-select" id="project-select" onchange="switchProject(this.value)"></select>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats" id="stats"></div>
+    <!-- Search -->
+    <input type="text" class="search-bar" id="search" placeholder="Search by agent name or trace ID..." oninput="renderTraces()">
+    <!-- Filters -->
+    <div class="filters" id="filters"></div>
+    <!-- Trace list -->
+    <div class="trace-list" id="trace-list"><div class="loading">Loading traces</div></div>
+  </div>
+
+  <div class="detail-view" id="detail-view">
+    <button class="back-btn" onclick="showListView()">← Back to traces</button>
+    <div id="detail-content"></div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+</div>
+
+<!-- Loading state -->
+<div id="loading-screen" class="loading" style="padding-top:80px">Checking authentication</div>
+
+<!-- Replay bar -->
+<div class="replay-bar" id="replay-bar">
+  <button class="replay-btn" id="replay-btn" onclick="toggleReplay()">▶ Play</button>
+  <span style="font-size:12px;color:var(--text2)" id="replay-label">0 / 0</span>
+  <div class="replay-progress"><div class="replay-progress-bar" id="replay-progress-bar"></div></div>
+</div>
+
+<script is:inline>
+const API = '';
+
+let user = null;
+let projects = [];
+let currentProjectId = null;
+let traces = [];
+let steps = [];
+let currentTrace = null;
+let replayIndex = -1;
+let replayInterval = null;
+let replayActive = false;
+
+// Auth check
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (!r.ok) throw new Error('Not authenticated');
+    const data = await r.json();
+    user = data.user;
+    projects = data.projects || [];
+
+    if (projects.length === 0) {
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('trace-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">No projects yet. <a href="/app/settings" style="color:var(--accent)">Create one</a></div>';
+      document.getElementById('loading-screen').style.display = 'none';
+      return;
+    }
+
+    currentProjectId = projects[0].id;
+    document.getElementById('user-email').textContent = user.email;
+
+    // Populate project selector
+    const select = document.getElementById('project-select');
+    select.innerHTML = projects.map(p =>
+      `<option value="${p.id}">${p.name}</option>`
+    ).join('');
+
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('loading-screen').style.display = 'none';
+
+    loadTraces();
+  } catch (e) {
+    // Redirect to login
+    window.location.href = '/app/login';
+  }
+}
+
+function toggleUserMenu() {
+  document.getElementById('user-dropdown').classList.toggle('show');
+}
+
+// Close dropdown on click outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.user-menu')) {
+    document.getElementById('user-dropdown')?.classList.remove('show');
+  }
+});
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  window.location.href = '/app/login';
+}
+
+async function switchProject(projectId) {
+  currentProjectId = projectId;
+  loadTraces();
+}
+
+async function fetchAPI(path) {
+  const r = await fetch(`${API}${path}`, { credentials: 'same-origin' });
+  if (r.status === 401) {
+    window.location.href = '/app/login';
+    return null;
+  }
+  return r.json();
+}
+
+async function loadTraces() {
+  if (!currentProjectId) return;
+  const data = await fetchAPI(`/api/traces?project_id=${currentProjectId}&limit=100`);
+  if (!data) return;
+  traces = data.traces || [];
+  renderStats();
+  renderFilters();
+  renderTraces();
+}
+
+function renderStats() {
+  const total = traces.length;
+  const failed = traces.filter(t => t.status === 'failed' || t.status === 'error').length;
+  const running = traces.filter(t => t.status === 'in_progress').length;
+  const totalCost = traces.reduce((s, t) => s + (t.total_cost || 0), 0);
+  const totalTokens = traces.reduce((s, t) => s + (t.total_tokens || 0), 0);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card accent"><div class="stat-label">Total Traces</div><div class="stat-value">${total}</div></div>
+    <div class="stat-card ${failed > 0 ? 'red' : 'green'}"><div class="stat-label">Failed</div><div class="stat-value">${failed}</div></div>
+    <div class="stat-card amber"><div class="stat-label">Running</div><div class="stat-value">${running}</div></div>
+    <div class="stat-card accent"><div class="stat-label">Total Cost</div><div class="stat-value">$${totalCost.toFixed(4)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Tokens</div><div class="stat-value">${totalTokens.toLocaleString()}</div></div>
+  `;
+}
+
+function renderFilters() {
+  const statuses = ['all', ...new Set(traces.map(t => t.status))];
+  document.getElementById('filters').innerHTML = statuses.map(s =>
+    `<button class="filter-btn ${s === 'all' ? 'active' : ''}" onclick="setFilter('${s}')">${s === 'all' ? 'All' : s.replace('_', ' ')}</button>`
+  ).join('');
+}
+
+let currentFilter = 'all';
+let currentSearch = '';
+
+function setFilter(status) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderTraces();
+}
+
+function renderTraces() {
+  currentSearch = document.getElementById('search').value.toLowerCase();
+
+  let filtered = traces.filter(t => {
+    if (currentFilter !== 'all' && t.status !== currentFilter) return false;
+    if (currentSearch && !t.agent_name?.toLowerCase().includes(currentSearch) && !t.id.toLowerCase().includes(currentSearch)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    document.getElementById('trace-list').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);font-size:14px">No traces found</div>';
+    return;
+  }
+
+  document.getElementById('trace-list').innerHTML = filtered.map(t => `
+    <div class="trace-card" onclick="showTrace('${t.id}')">
+      <div class="trace-header">
+        <span class="status-badge ${t.status}">${t.status.replace('_', ' ')}</span>
+        <span class="trace-name">${t.agent_name || 'Unnamed'}</span>
+      </div>
+      <div class="trace-meta">
+        <span>📋 ${t.total_steps || 0} steps</span>
+        <span>💰 $${(t.total_cost || 0).toFixed(4)}</span>
+        <span>⚡ ${(t.total_latency_ms || 0) > 1000 ? (t.total_latency_ms/1000).toFixed(1) + 's' : (t.total_latency_ms || 0) + 'ms'}</span>
+        <span>🔤 ${(t.total_tokens || 0).toLocaleString()} tokens</span>
+        <span>🔧 ${t.framework || '-'}</span>
+        <span>🤖 ${t.model || '-'}</span>
+        <span>🕐 ${t.started_at ? new Date(t.started_at + 'Z').toLocaleString() : '-'}</span>
+        ${t.child_count > 0 ? `<span style="color:var(--accent)">🔗 ${t.child_count} children</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function showTrace(traceId) {
+  document.getElementById('list-view').style.display = 'none';
+  document.getElementById('detail-view').classList.add('active');
+  document.getElementById('detail-content').innerHTML = '<div class="loading">Loading trace</div>';
+
+  const data = await fetchAPI(`/api/traces/${traceId}`);
+  if (!data) return;
+  const trace = data.trace;
+  steps = data.steps || [];
+  currentTrace = trace;
+
+  if (!trace) {
+    document.getElementById('detail-content').innerHTML = '<div style="text-align:center;padding:40px;color:var(--red)">Trace not found</div>';
+    return;
+  }
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-header">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span class="status-badge ${trace.status}">${trace.status.replace('_', ' ')}</span>
+        <h2>${trace.agent_name || 'Unnamed'}</h2>
+        <span style="font-size:12px;color:var(--text2);font-family:monospace">${trace.id}</span>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="label">Framework</div><div class="value">${trace.framework || '-'}</div></div>
+        <div class="detail-item"><div class="label">Model</div><div class="value">${trace.model || '-'}</div></div>
+        <div class="detail-item"><div class="label">Total Steps</div><div class="value">${trace.total_steps || steps.length}</div></div>
+        <div class="detail-item"><div class="label">Cost</div><div class="value">$${(trace.total_cost || 0).toFixed(4)}</div></div>
+        <div class="detail-item"><div class="label">Tokens</div><div class="value">${((trace.total_input_tokens || 0) + (trace.total_output_tokens || 0)).toLocaleString()}</div></div>
+        <div class="detail-item"><div class="label">Latency</div><div class="value">${(trace.total_latency_ms || 0) > 1000 ? (trace.total_latency_ms/1000).toFixed(1) + 's' : (trace.total_latency_ms || 0) + 'ms'}</div></div>
+        <div class="detail-item"><div class="label">Started</div><div class="value">${trace.started_at || '-'}</div></div>
+        <div class="detail-item"><div class="label">Ended</div><div class="value">${trace.ended_at || 'In progress'}</div></div>
+      </div>
+      ${data.children && data.children.length > 0 ? `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:8px">🧩 Multi-Agent Children (${data.children.length})</div>
+          ${data.children.map(c => `
+            <div style="font-size:12px;padding:6px 10px;background:var(--bg);border-radius:4px;margin-bottom:4px;cursor:pointer" onclick="showTrace('${c.id}')">
+              ${c.agent_name} — ${c.status} — ${c.total_steps} steps — $${(c.total_cost||0).toFixed(4)}
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+  renderTimeline();
+  document.getElementById('replay-bar').classList.add('active');
+  resetReplay();
+}
+
+function renderTimeline() {
+  if (!steps.length) {
+    document.getElementById('timeline').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">No steps recorded</div>';
+    return;
+  }
+
+  document.getElementById('timeline').innerHTML = steps.map((s, i) => {
+    const icon = {think:'🤔',tool_call:'🔧',tool_result:'📥',message:'💬',decision:'🧠',error:'❌',handoff:'🔗'}[s.step_type] || '📋';
+    return `
+      <div class="step ${s.step_type}" onclick="toggleStep(${i})">
+        <div class="step-dot"></div>
+        <div class="step-header">
+          <span class="step-icon">${icon}</span>
+          <span class="step-type">${s.step_type.replace('_', ' ')}</span>
+          <span class="step-meta">
+            <span>🔤 ${(s.input_tokens || 0) + (s.output_tokens || 0)} tok</span>
+            <span>💰 $${(s.cost || 0).toFixed(4)}</span>
+            <span>⚡ ${(s.latency_ms || 0)}ms</span>
+          </span>
+        </div>
+        <div class="step-title">${s.thinking || s.tool_name || s.input || '—'}</div>
+        <div class="step-detail" id="step-detail-${i}">
+          ${s.input ? `<div><strong>Input:</strong><pre>${escapeHtml(s.input)}</pre></div>` : ''}
+          ${s.output ? `<div><strong>Output:</strong><pre>${escapeHtml(s.output)}</pre></div>` : ''}
+          ${s.thinking ? `<div><strong>Thinking:</strong><pre>${escapeHtml(s.thinking)}</pre></div>` : ''}
+          ${s.tool_name ? `<div><strong>Tool:</strong> ${s.tool_name}</div>` : ''}
+          ${s.tool_input ? `<div><strong>Tool Input:</strong><pre>${escapeHtml(typeof s.tool_input === 'string' ? s.tool_input : JSON.stringify(s.tool_input, null, 2))}</pre></div>` : ''}
+          ${s.tool_output ? `<div><strong>Tool Output:</strong><pre>${escapeHtml(typeof s.tool_output === 'string' ? s.tool_output : JSON.stringify(s.tool_output, null, 2))}</pre></div>` : ''}
+          ${s.error_message ? `<div style="color:var(--red)"><strong>Error:</strong> ${s.error_message}</div>` : ''}
+          ${s.handoff_to_agent ? `<div style="color:var(--accent)"><strong>Handoff to:</strong> ${s.handoff_to_agent} ${s.handoff_trace_id ? `(trace: ${s.handoff_trace_id})` : ''}</div>` : ''}
+          <div style="margin-top:4px;font-size:11px;color:var(--text2)">
+            Input tokens: ${s.input_tokens || 0} | Output tokens: ${s.output_tokens || 0} | Cost: $${(s.cost || 0).toFixed(4)} | Latency: ${s.latency_ms || 0}ms
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleStep(i) {
+  const detail = document.getElementById(`step-detail-${i}`);
+  if (detail) detail.classList.toggle('open');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function showListView() {
+  document.getElementById('list-view').style.display = 'block';
+  document.getElementById('detail-view').classList.remove('active');
+  document.getElementById('replay-bar').classList.remove('active');
+  stopReplay();
+}
+
+// Replay
+function resetReplay() {
+  replayIndex = -1;
+  stopReplay();
+  updateReplayUI();
+}
+
+function stopReplay() {
+  replayActive = false;
+  if (replayInterval) { clearInterval(replayInterval); replayInterval = null; }
+  document.getElementById('replay-btn').textContent = '▶ Play';
+  replayIndex = -1;
+}
+
+function toggleReplay() {
+  if (replayActive) {
+    stopReplay();
+    return;
+  }
+  replayActive = true;
+  document.getElementById('replay-btn').textContent = '⏸ Pause';
+  replayIndex = -1;
+
+  steps.forEach((_, i) => {
+    document.getElementById(`step-detail-${i}`)?.classList.remove('open');
+  });
+
+  replayInterval = setInterval(() => {
+    replayIndex++;
+    if (replayIndex >= steps.length) {
+      stopReplay();
+      updateReplayUI();
+      return;
+    }
+    document.getElementById(`step-detail-${replayIndex}`)?.classList.add('open');
+    document.querySelectorAll('.step')[replayIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    updateReplayUI();
+  }, 800);
+}
+
+function updateReplayUI() {
+  const total = steps.length;
+  const current = Math.max(0, Math.min(replayIndex, total - 1));
+  document.getElementById('replay-label').textContent = `${current + 1} / ${total}`;
+  document.getElementById('replay-progress-bar').style.width = total > 0 ? `${((current + 1) / total) * 100}%` : '0%';
+}
+
+// Expose functions to HTML onclick
+window.showTrace = showTrace;
+window.toggleStep = toggleStep;
+window.showListView = showListView;
+window.toggleReplay = toggleReplay;
+window.setFilter = setFilter;
+window.renderTraces = renderTraces;
+window.switchProject = switchProject;
+window.logout = logout;
+window.toggleUserMenu = toggleUserMenu;
+
+// Init
+checkAuth();
+</script>
+</body>
+</html>

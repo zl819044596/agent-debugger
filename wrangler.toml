@@ -1,0 +1,9 @@
+name = "agent-debugger"
+compatibility_date = "2026-07-10"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agent-debugger-db"
+database_id = "a291db11-7b04-4cc7-a6e4-2daa8da4a91d"
